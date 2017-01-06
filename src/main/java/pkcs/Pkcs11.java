@@ -5,6 +5,7 @@
  */
 package pkcs;
 
+import callbacks.PasswordCallback;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.security.KeyStore;
@@ -25,6 +26,7 @@ public class Pkcs11 {
 
     private static Provider _provider;
 
+    private static PasswordCallback passwordCallback;
     public static void setDriver(File driver) {
         Objects.requireNonNull(driver, "Driver must not be null!");
         _driver = driver;
@@ -43,7 +45,7 @@ public class Pkcs11 {
         registerProvider();
         KeyStore cc = null;
         List<X509Certificate> list = new ArrayList<>();
-        char[] pin = "".toCharArray();
+        char[] pin = "7809".toCharArray();
         try {
             cc = KeyStore.getInstance("PKCS11", _provider);
             KeyStore.PasswordProtection pp = new KeyStore.PasswordProtection(pin);

@@ -5,6 +5,7 @@
  */
 package pkcs;
 
+import callbacks.impl.PasswordJOptionPane;
 import java.io.File;
 import java.security.cert.X509Certificate;
 import java.util.List;
@@ -45,6 +46,8 @@ public class Pkcs11Test {
      */
     @Test
     public void testSetDriver() {
+        PasswordJOptionPane pane = new PasswordJOptionPane(null);
+        pane.getPassword();
         System.out.println("setDriver");
         File driver = new File("C:\\WINDOWS\\System32\\acospkcs11.dll");
         Pkcs11.setDriver(driver);
