@@ -9,6 +9,7 @@ package callbacks;
  *
  * @author Konstantin Tsanov <k.tsanov@gmail.com>
  */
-public interface PasswordCallback {
-    char[] getPassword();
+public interface GuiPasswordCallback {
+
+    public char[] getPassword();
 }

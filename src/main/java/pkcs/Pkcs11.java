@@ -5,23 +5,18 @@
  */
 package pkcs;
 
-import enums.KeyStoreType;
+import guihandler.GuiHandler;
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.IOException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
 import java.security.Provider;
 import java.security.Security;
-import java.security.UnrecoverableKeyException;
-import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import lombok.extern.java.Log;
 
 /**
@@ -34,8 +29,6 @@ public class Pkcs11 extends Pkcs1_ {
     private File _driver;
 
     private Provider _provider;
-
-    private KeyStore _certKeyStore;
 
     public void setDriver(File driver) {
         Objects.requireNonNull(driver, "Driver must not be null!");
@@ -52,33 +45,25 @@ public class Pkcs11 extends Pkcs1_ {
         Security.addProvider(_provider);
     }
 
+    private void createGuiHandler() {
+        _guiHandler = new GuiHandler();
+    }
+
     private void unregisterProvider() {
         Security.removeProvider(_provider.getName());
     }
 
     @Override
-    protected final void login() {
-        char[] pin = _passwordCallback.getPassword();
+    public final void login() {
+        registerProvider();
+        _chp = new KeyStore.CallbackHandlerProtection(_guiHandler);
+        _builder = KeyStore.Builder.newInstance("PKCS11", _provider, _chp);
         try {
-            _certKeyStore = KeyStore.getInstance(KeyStoreType.PKCS11.name(), _provider);
+            _certKeyStore = _builder.getKeyStore();
         } catch (KeyStoreException ex) {
-            log.log(Level.SEVERE, null, ex);
+            log.log(Level.SEVERE, "Error occured during operation!", ex);
             throw new RuntimeException(ex);
         }
-        KeyStore.PasswordProtection pp = new KeyStore.PasswordProtection(pin);
-        try {
-            _certKeyStore.load(null, pp.getPassword());
-        } catch (IOException ex) {
-            log.log(Level.SEVERE, "An error occured", ex);
-            throw new RuntimeException(ex);
-        } catch (NoSuchAlgorithmException ex) {
-            log.log(Level.SEVERE, "An error occured while loading device!", ex);
-            throw new RuntimeException(ex);
-        } catch (CertificateException ex) {
-            log.log(Level.SEVERE, null, ex);
-            throw new RuntimeException(ex);
-        }
-
     }
 
     public List<X509Certificate> listCertificates() {

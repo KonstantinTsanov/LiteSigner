@@ -5,8 +5,9 @@
  */
 package pkcs;
 
-import callbacks.PasswordCallback;
 import java.security.KeyStore;
+import callbacks.GuiPasswordCallback;
+import guihandler.GuiHandler;
 
 /**
  *
@@ -14,12 +15,14 @@ import java.security.KeyStore;
  */
 abstract class Pkcs1_ {
 
-    protected PasswordCallback _passwordCallback;
+    protected KeyStore _certKeyStore;
+    protected KeyStore.Builder _builder;
+    protected KeyStore.CallbackHandlerProtection _chp;
+    protected GuiHandler _guiHandler;
 
-    private KeyStore _certKeyStore;
-
-    public void setPasswordSource(PasswordCallback passwordCallback) {
-        _passwordCallback = passwordCallback;
+    public void initGuiHandler(GuiPasswordCallback guiPasswordCallback) {
+        _guiHandler = new GuiHandler();
+        _guiHandler.setGuiPasswordCallback(guiPasswordCallback);
     }
 
     protected abstract void login();
