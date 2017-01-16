@@ -14,10 +14,12 @@ import java.security.Provider;
 import java.security.Security;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.logging.Level;
 import lombok.extern.java.Log;
+import sun.security.pkcs11.SunPKCS11;
 
 /**
  *
@@ -41,16 +43,15 @@ public class Pkcs11 extends Pkcs1_ {
         //String pkcs11Config = "name = SmartCardUtil\nlibrary = C:\\WINDOWS\\System32\\acospkcs11.dll";
         ByteArrayInputStream configStream = new ByteArrayInputStream(pkcs11Config.getBytes());
         _provider = new sun.security.pkcs11.SunPKCS11(configStream);
-
         Security.addProvider(_provider);
-    }
-
-    private void createGuiHandler() {
-        _guiHandler = new GuiHandler();
     }
 
     private void unregisterProvider() {
         Security.removeProvider(_provider.getName());
+    }
+
+    private void createGuiHandler() {
+        _guiHandler = new GuiHandler();
     }
 
     @Override
@@ -90,7 +91,20 @@ public class Pkcs11 extends Pkcs1_ {
     }
 
     public List<String> listAliases() {
-        //TODO
-        return null;
+        try {
+            return Collections.list(_certKeyStore.aliases());
+        } catch (KeyStoreException ex) {
+            log.log(Level.SEVERE, "The keystore has not been loaded!", ex);
+            throw new RuntimeException("Keystore not loaded!", ex);
+        }
+    }
+
+    public X509Certificate getCertificate(String alias) {
+        try {
+            return (X509Certificate) _certKeyStore.getCertificate(alias);
+        } catch (KeyStoreException ex) {
+            log.log(Level.SEVERE, "The keystore has not been loaded!", ex);
+            throw new RuntimeException("Keystore not loaded!", ex);
+        }
     }
 }
