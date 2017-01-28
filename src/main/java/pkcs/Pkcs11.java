@@ -5,9 +5,9 @@
  */
 package pkcs;
 
-import guihandler.GuiHandler;
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.IOException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.Provider;
@@ -18,8 +18,16 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 import lombok.extern.java.Log;
-import sun.security.pkcs11.SunPKCS11;
+import sun.security.pkcs11.wrapper.CK_ATTRIBUTE;
+import sun.security.pkcs11.wrapper.CK_INFO;
+import sun.security.pkcs11.wrapper.CK_SLOT_INFO;
+import sun.security.pkcs11.wrapper.CK_TOKEN_INFO;
+import sun.security.pkcs11.wrapper.PKCS11Constants;
+import static sun.security.pkcs11.wrapper.PKCS11Constants.CKA_ID;
+import static sun.security.pkcs11.wrapper.PKCS11Constants.CKA_LABEL;
+import sun.security.pkcs11.wrapper.PKCS11Exception;
 
 /**
  *
@@ -28,18 +36,17 @@ import sun.security.pkcs11.SunPKCS11;
 @Log
 public class Pkcs11 extends Pkcs1_ {
 
-    private File _driver;
+    private final File _driver;
 
-    private Provider _provider;
 
-    public void setDriver(File driver) {
+    public Pkcs11(File driver) {
         Objects.requireNonNull(driver, "Driver must not be null!");
         _driver = driver;
+        registerProvider();
     }
 
     private void registerProvider() {
-        Objects.requireNonNull(_driver, "Driver must not be null!");
-        String pkcs11Config = String.format("name=%s\nlibrary=%s", "SmartCardUtil", _driver);
+        String pkcs11Config = String.format("name=%s\nlibrary=%s", "SmartCard" + Thread.currentThread().getId(), _driver);
         //String pkcs11Config = "name = SmartCardUtil\nlibrary = C:\\WINDOWS\\System32\\acospkcs11.dll";
         ByteArrayInputStream configStream = new ByteArrayInputStream(pkcs11Config.getBytes());
         _provider = new sun.security.pkcs11.SunPKCS11(configStream);
@@ -50,13 +57,8 @@ public class Pkcs11 extends Pkcs1_ {
         Security.removeProvider(_provider.getName());
     }
 
-    private void createGuiHandler() {
-        _guiHandler = new GuiHandler();
-    }
-
     @Override
     public final void login() {
-        registerProvider();
         _chp = new KeyStore.CallbackHandlerProtection(_guiHandler);
         _builder = KeyStore.Builder.newInstance("PKCS11", _provider, _chp);
         try {
@@ -68,7 +70,6 @@ public class Pkcs11 extends Pkcs1_ {
     }
 
     public List<X509Certificate> listCertificates() {
-        registerProvider();
         List<X509Certificate> list = new ArrayList<>();
         try {
             java.util.Enumeration aliases = _certKeyStore.aliases();
@@ -90,6 +91,7 @@ public class Pkcs11 extends Pkcs1_ {
         return list;
     }
 
+    @Override
     public List<String> listAliases() {
         try {
             return Collections.list(_certKeyStore.aliases());
@@ -99,6 +101,7 @@ public class Pkcs11 extends Pkcs1_ {
         }
     }
 
+    @Override
     public X509Certificate getCertificate(String alias) {
         try {
             return (X509Certificate) _certKeyStore.getCertificate(alias);
