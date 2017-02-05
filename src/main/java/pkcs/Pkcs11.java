@@ -7,10 +7,8 @@ package pkcs;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.IOException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
-import java.security.Provider;
 import java.security.Security;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
@@ -18,16 +16,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import lombok.extern.java.Log;
-import sun.security.pkcs11.wrapper.CK_ATTRIBUTE;
-import sun.security.pkcs11.wrapper.CK_INFO;
-import sun.security.pkcs11.wrapper.CK_SLOT_INFO;
-import sun.security.pkcs11.wrapper.CK_TOKEN_INFO;
-import sun.security.pkcs11.wrapper.PKCS11Constants;
-import static sun.security.pkcs11.wrapper.PKCS11Constants.CKA_ID;
-import static sun.security.pkcs11.wrapper.PKCS11Constants.CKA_LABEL;
-import sun.security.pkcs11.wrapper.PKCS11Exception;
 
 /**
  *
@@ -37,7 +26,6 @@ import sun.security.pkcs11.wrapper.PKCS11Exception;
 public class Pkcs11 extends Pkcs1_ {
 
     private final File _driver;
-
 
     public Pkcs11(File driver) {
         Objects.requireNonNull(driver, "Driver must not be null!");

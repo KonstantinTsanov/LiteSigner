@@ -65,19 +65,14 @@ public class Pkcs7 extends Signer {
     @Override
     public void sign() {
         try {
-            System.out.println("1");
             Objects.requireNonNull(_input);
             Objects.requireNonNull(_output);
             X509Certificate cert;
             cert = (X509Certificate) _pkcs1x.get_certKeyStore().getCertificate(_alias);
-            System.out.println("2");
             List certList = new ArrayList();
             certList.add(cert);
-            System.out.println("3");
             Store certs = new JcaCertStore(certList);
-            System.out.println("4");
             CMSProcessableFile inputFile = new CMSProcessableFile(_input);
-            System.out.println("5");
             _pkcs1x.get_guiHandler().handle(callbacks);
             char[] pin = ((PasswordCallback) callbacks[0]).getPassword();
             ContentSigner sha1Signer = new JcaContentSignerBuilder("SHA1withRSA")
