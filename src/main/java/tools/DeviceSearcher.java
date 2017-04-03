@@ -26,12 +26,13 @@ public class DeviceSearcher {
             try {
                 p11 = PKCS11.getInstance(dll, "C_GetFunctionList", null, true);
                 long[] slots = p11.C_GetSlotList(true);
+                System.out.println(p11.C_GetInfo());
             } catch (IOException ex) {
                 Logger.getLogger(DeviceSearcher.class.getName()).log(Level.SEVERE, null, ex);
             } catch (PKCS11Exception ex) {
                 Logger.getLogger(DeviceSearcher.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
-        throw new NotImplementedException("Not implemented! Todo");
+        return null;
     }
 }

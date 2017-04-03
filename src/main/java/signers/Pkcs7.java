@@ -67,6 +67,7 @@ public class Pkcs7 extends Signer {
         try {
             Objects.requireNonNull(_input);
             Objects.requireNonNull(_output);
+            
             X509Certificate cert;
             cert = (X509Certificate) _pkcs1x.get_certKeyStore().getCertificate(_alias);
             List certList = new ArrayList();
@@ -115,5 +116,4 @@ public class Pkcs7 extends Signer {
     public void verify() {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
-
 }
