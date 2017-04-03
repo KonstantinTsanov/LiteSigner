@@ -5,7 +5,13 @@
  */
 package tools;
 
+import java.io.IOException;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import org.apache.commons.lang3.NotImplementedException;
+import sun.security.pkcs11.wrapper.PKCS11;
+import sun.security.pkcs11.wrapper.PKCS11Exception;
 
 /**
  *
@@ -13,7 +19,19 @@ import java.util.List;
  */
 public class DeviceSearcher {
 
+    //TODO
     public static List<String> List() {
-        return null;
+        for (String dll : DeviceSearcher.List()) {
+            PKCS11 p11;
+            try {
+                p11 = PKCS11.getInstance(dll, "C_GetFunctionList", null, true);
+                long[] slots = p11.C_GetSlotList(true);
+            } catch (IOException ex) {
+                Logger.getLogger(DeviceSearcher.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (PKCS11Exception ex) {
+                Logger.getLogger(DeviceSearcher.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        throw new NotImplementedException("Not implemented! Todo");
     }
 }
