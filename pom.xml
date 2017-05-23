@@ -46,6 +46,12 @@
             <artifactId>commons-lang3</artifactId>
             <version>3.5</version>
         </dependency>
+        <dependency>
+            <groupId>maven</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <version>1.9.javadoc</version>
+            <type>javadoc.jar</type>
+        </dependency>
     </dependencies>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
