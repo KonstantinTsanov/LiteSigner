@@ -10,10 +10,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.OptionalLong;
 import java.util.Properties;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.prefs.Preferences;
 import lombok.extern.java.Log;
 import org.apache.commons.lang3.NotImplementedException;
@@ -62,7 +60,9 @@ public class DeviceSearcher {
                     try {
                         long[] slots = p11.C_GetSlotList(true);
                         if (slots.length > 0) {
-                            list.add(p11.C_GetSlotInfo(slots[0]).toString());
+                            for (int i = 0; i < slots.length ; i++) {
+                                list.add(new String(p11.C_GetSlotInfo(slots[i]).slotDescription).trim());
+                            }
                         }
                     } catch (PKCS11Exception ex) {
                         throw new RuntimeException(ex);
