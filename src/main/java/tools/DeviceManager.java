@@ -5,8 +5,10 @@
  */
 package tools;
 
+import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.AbstractMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -23,16 +25,16 @@ import sun.security.pkcs11.wrapper.PKCS11Exception;
  * @author Konstantin Tsanov <k.tsanov@gmail.com>
  */
 @Log
-public class DeviceSearcher {
+public class DeviceManager {
 
     private static Properties driversList = new Properties();
     private static final String key = "Paths";
     private static Preferences driverPaths;
 
     static {
-        driverPaths = Preferences.userNodeForPackage(DeviceSearcher.class);
+        driverPaths = Preferences.userNodeForPackage(DeviceManager.class);
         try {
-            driversList.load(DeviceSearcher.class.getResourceAsStream("/" + DeviceSearcher.class.getSimpleName() + ".properties"));
+            driversList.load(DeviceManager.class.getResourceAsStream("/" + DeviceManager.class.getSimpleName() + ".properties"));
         } catch (IOException ex) {
             log.log(Level.WARNING, "Couldn't load the driver list!", ex);
         }
@@ -41,16 +43,12 @@ public class DeviceSearcher {
         }
     }
 
-    private static List<String> GetAllDrivers() {
-        //todo
-        throw new NotImplementedException("Not yet implemented");
-    }
-
     //TODO
-    public static List<String> SearchForDevices() {
+    public static Map<String, Map.Entry<Integer, File>> SearchForDevices() {
         String[] paths = driverPaths.get(key, null).split(";", -1);
         String driver;
-        List<String> list = new ArrayList<>();
+        //The first string represents the slot description. The second represents both the slotListIndex and the driver for the token.
+        Map<String, Map.Entry<Integer, File>> tokensDescription = new HashMap<>();
         for (String path : paths) {
             for (Map.Entry<Object, Object> entry : driversList.entrySet()) {
                 driver = path.concat("\\").concat(entry.getValue().toString()).concat(".dll");
@@ -60,24 +58,32 @@ public class DeviceSearcher {
                     try {
                         long[] slots = p11.C_GetSlotList(true);
                         if (slots.length > 0) {
-                            for (int i = 0; i < slots.length ; i++) {
-                                list.add(new String(p11.C_GetSlotInfo(slots[i]).slotDescription).trim());
+                            for (int i = 0; i < slots.length; i++) {
+                                Map.Entry<Integer, File> slotIdAndDriver = new AbstractMap.SimpleEntry<>(i, new File(driver));
+                                tokensDescription.put(new String(p11.C_GetSlotInfo(slots[i]).slotDescription).trim(), slotIdAndDriver);
                             }
                         }
                     } catch (PKCS11Exception ex) {
                         throw new RuntimeException(ex);
                     }
                 } catch (IOException ex) {
-                    //log.log(Level.SEVERE, "Key: " + entry.getKey() + " value: "+ entry.getValue(), ex);
-                    continue;
+                    // I don't care. - there's no plugged device that works with this dll. continue.
                 } catch (PKCS11Exception ex) {
-                    log.log(Level.SEVERE, "PKCS11 error!", ex);
+                    throw new RuntimeException(ex);
                 }
             }
         }
         //TODO
-        return list;
+        return tokensDescription;
     }
+
+//    public static Map<String, Map.Entry<Integer, File>> CheckDeviceStatus(List<Map.Entry<Integer, File>> slotIndexAndDriver) {
+//        PKCS11 p11 = null;
+//        for (Map.Entry<Integer, File> deviceProperties : slotIndexAndDriver) {
+//            //p11 = PKCS11.getInstance(deviceProperties.getValue(), "C_GetFunctionList", null, false);
+//        }
+//        return null;
+//    }
 
     public static void AddNewPathToDriver(String path) throws IllegalArgumentException {
         Objects.requireNonNull(path, "path must not be null");
