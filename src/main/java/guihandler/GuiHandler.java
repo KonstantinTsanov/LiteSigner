@@ -25,7 +25,6 @@ import lombok.extern.java.Log;
  */
 @Log
 public class GuiHandler implements CallbackHandler {
-
     private GuiPasswordCallback _guiPasswordCallback;
 
     public void setGuiPasswordCallback(GuiPasswordCallback guiPasswordCallback) {

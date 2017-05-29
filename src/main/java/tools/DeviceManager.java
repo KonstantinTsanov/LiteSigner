@@ -21,20 +21,27 @@ import sun.security.pkcs11.wrapper.PKCS11;
 import sun.security.pkcs11.wrapper.PKCS11Exception;
 
 /**
+ * Using singleton because of NoClassDefFoundError exeption that happened when
+ * the class was static with a static block
  *
  * @author Konstantin Tsanov <k.tsanov@gmail.com>
  */
 @Log
 public class DeviceManager {
 
-    private static Properties driversList = new Properties();
-    private static final String key = "Paths";
-    private static Preferences driverPaths;
+    private Properties driversList = new Properties();
+    private final String key = "Paths";
+    private Preferences driverPaths;
+    private static DeviceManager singleton = new DeviceManager();
 
-    static {
+    public static DeviceManager getInstance() {
+        return singleton;
+    }
+
+    private void initialize() {
         driverPaths = Preferences.userNodeForPackage(DeviceManager.class);
         try {
-            driversList.load(DeviceManager.class.getResourceAsStream("/" + DeviceManager.class.getSimpleName() + ".properties"));
+            driversList.load(DeviceManager.class.getResourceAsStream("/" + "DeviceManager.properties"));
         } catch (IOException ex) {
             log.log(Level.WARNING, "Couldn't load the driver list!", ex);
         }
@@ -44,7 +51,8 @@ public class DeviceManager {
     }
 
     //TODO
-    public static Map<String, Map.Entry<Integer, File>> SearchForDevices() {
+    public Map<String, Map.Entry<Integer, File>> SearchForDevices() {
+        initialize();
         String[] paths = driverPaths.get(key, null).split(";", -1);
         String driver;
         //The first string represents the slot description. The second represents both the slotListIndex and the driver for the token.
@@ -77,15 +85,15 @@ public class DeviceManager {
         return tokensDescription;
     }
 
-//    public static Map<String, Map.Entry<Integer, File>> CheckDeviceStatus(List<Map.Entry<Integer, File>> slotIndexAndDriver) {
-//        PKCS11 p11 = null;
-//        for (Map.Entry<Integer, File> deviceProperties : slotIndexAndDriver) {
-//            //p11 = PKCS11.getInstance(deviceProperties.getValue(), "C_GetFunctionList", null, false);
-//        }
-//        return null;
-//    }
+    public Map<String, Map.Entry<Integer, File>> CheckDeviceStatus(List<Map.Entry<Integer, File>> slotIndexAndDriver) {
+        PKCS11 p11 = null;
+        for (Map.Entry<Integer, File> deviceProperties : slotIndexAndDriver) {
+            //p11 = PKCS11.getInstance(deviceProperties.getValue(), "C_GetFunctionList", null, false);
+        }
+        return null;
+    }
 
-    public static void AddNewPathToDriver(String path) throws IllegalArgumentException {
+    public void AddNewPathToDriver(String path) throws IllegalArgumentException {
         Objects.requireNonNull(path, "path must not be null");
 
         String currentPaths = driverPaths.get(key, null);
@@ -99,7 +107,7 @@ public class DeviceManager {
         driverPaths.put(key, newPaths);
     }
 
-    public static String[] GetAllDriverPaths() {
+    public String[] GetAllDriverPaths() {
         return driverPaths.get(key, null).split(";", -1);
     }
 }
