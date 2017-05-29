@@ -26,15 +26,18 @@ import lombok.extern.java.Log;
 public class Pkcs11 extends Pkcs1_ {
 
     private final File _driver;
+    private final long _slotId;
+    private static int pluggedCount = 0;
 
-    public Pkcs11(File driver) {
+    public Pkcs11(long slotId, File driver) {
         Objects.requireNonNull(driver, "Driver must not be null!");
         _driver = driver;
+        _slotId = slotId;
         registerProvider();
     }
 
     private void registerProvider() {
-        String pkcs11Config = String.format("name=%s\nlibrary=%s", "SmartCard" + Thread.currentThread().getId(), _driver);
+        String pkcs11Config = String.format("name=%s\nlibrary=%s", "SmartCard" + pluggedCount++, _driver, _slotId);
         //String pkcs11Config = "name = SmartCardUtil\nlibrary = C:\\WINDOWS\\System32\\acospkcs11.dll";
         ByteArrayInputStream configStream = new ByteArrayInputStream(pkcs11Config.getBytes());
         _provider = new sun.security.pkcs11.SunPKCS11(configStream);

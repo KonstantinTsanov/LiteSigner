@@ -87,10 +87,10 @@ public class Pkcs7 extends Signer {
 
             CMSSignedData sigData = gen.generate(inputFile, false);
 
-            FileOutputStream fileOuputStream = new FileOutputStream(_output);
-            fileOuputStream.write(sigData.getEncoded());
-            fileOuputStream.flush();
-            fileOuputStream.close();
+            try (FileOutputStream fileOuputStream = new FileOutputStream(_output)) {
+                fileOuputStream.write(sigData.getEncoded());
+                fileOuputStream.flush();
+            }
 
         } catch (CertificateEncodingException ex) {
             Logger.getLogger(Pkcs7.class.getName()).log(Level.SEVERE, null, ex);

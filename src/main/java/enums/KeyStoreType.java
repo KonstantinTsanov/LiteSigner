@@ -17,16 +17,16 @@ import pkcs.Pkcs1_;
 public enum KeyStoreType {
     PKCS11 {
         @Override
-        Pkcs1_ getNewPkcsObject(File driver) {
-            return new Pkcs11(driver);
+        Pkcs1_ getNewPkcsObject(File driver, int slotListIndex) {
+            return new Pkcs11(slotListIndex, driver);
         }
     }, PKCS12 {
         @Override
-        Pkcs1_ getNewPkcsObject(File path) {
+        Pkcs1_ getNewPkcsObject(File path, int slotListIndex) {
             //TODO pkcs12 constructor
             return new Pkcs12();
         }
     };
 
-    abstract Pkcs1_ getNewPkcsObject(File file);
+    abstract Pkcs1_ getNewPkcsObject(File file, int slotListIndex);
 }
