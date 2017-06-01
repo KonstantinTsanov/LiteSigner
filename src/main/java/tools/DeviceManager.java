@@ -51,7 +51,7 @@ public class DeviceManager {
     }
 
     //TODO
-    public Map<String, Map.Entry<Integer, File>> SearchForDevices() {
+    public synchronized Map<String, Map.Entry<Integer, File>> SearchForDevices() throws PKCS11Exception {
         initialize();
         String[] paths = driverPaths.get(key, null).split(";", -1);
         String driver;
@@ -63,21 +63,15 @@ public class DeviceManager {
                 PKCS11 p11 = null;
                 try {
                     p11 = PKCS11.getInstance(driver, "C_GetFunctionList", null, false);
-                    try {
-                        long[] slots = p11.C_GetSlotList(true);
-                        if (slots.length > 0) {
-                            for (int i = 0; i < slots.length; i++) {
-                                Map.Entry<Integer, File> slotIdAndDriver = new AbstractMap.SimpleEntry<>(i, new File(driver));
-                                tokensDescription.put(new String(p11.C_GetSlotInfo(slots[i]).slotDescription).trim(), slotIdAndDriver);
-                            }
+                    long[] slots = p11.C_GetSlotList(true);
+                    if (slots.length > 0) {
+                        for (int i = 0; i < slots.length; i++) {
+                            Map.Entry<Integer, File> slotIdAndDriver = new AbstractMap.SimpleEntry<>(i, new File(driver));
+                            tokensDescription.put(new String(p11.C_GetSlotInfo(slots[i]).slotDescription).trim(), slotIdAndDriver);
                         }
-                    } catch (PKCS11Exception ex) {
-                        throw new RuntimeException(ex);
                     }
                 } catch (IOException ex) {
                     // I don't care. - there's no plugged device that works with this dll. continue.
-                } catch (PKCS11Exception ex) {
-                    throw new RuntimeException(ex);
                 }
             }
         }
