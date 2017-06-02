@@ -16,7 +16,10 @@ import java.util.Properties;
 import java.util.logging.Level;
 import java.util.prefs.Preferences;
 import lombok.extern.java.Log;
-import org.apache.commons.lang3.NotImplementedException;
+import org.usb4java.Context;
+import org.usb4java.DeviceList;
+import org.usb4java.LibUsb;
+import org.usb4java.LibUsbException;
 import sun.security.pkcs11.wrapper.PKCS11;
 import sun.security.pkcs11.wrapper.PKCS11Exception;
 
@@ -33,6 +36,19 @@ public class DeviceManager {
     private final String key = "Paths";
     private Preferences driverPaths;
     private static DeviceManager singleton = new DeviceManager();
+
+    private int pluggedUsbCount = 0;
+
+    private volatile boolean exiting = false;
+    //Javax4usb context
+    static Context context = new Context();
+
+    static {
+        int result = LibUsb.init(context);
+        if (result < 0) {
+            throw new LibUsbException("Unable to initialize libusb", result);
+        }
+    }
 
     public static DeviceManager getInstance() {
         return singleton;
@@ -75,7 +91,6 @@ public class DeviceManager {
                 }
             }
         }
-        //TODO
         return tokensDescription;
     }
 
@@ -85,6 +100,20 @@ public class DeviceManager {
             //p11 = PKCS11.getInstance(deviceProperties.getValue(), "C_GetFunctionList", null, false);
         }
         return null;
+    }
+
+    public void scanUsbDevices() {
+        // Read the USB device list
+        DeviceList list = new DeviceList();
+        int newUsbCount = LibUsb.getDeviceList(context, list);
+        if (newUsbCount < 0) {
+            throw new LibUsbException("Unable to get device list", newUsbCount);
+        }
+        //TODO
+        //if()
+        if (exiting) {
+            LibUsb.exit(context);
+        }
     }
 
     public void AddNewPathToDriver(String path) throws IllegalArgumentException {
