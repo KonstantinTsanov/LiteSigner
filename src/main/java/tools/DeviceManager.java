@@ -152,7 +152,6 @@ public class DeviceManager {
     private int countAttachedUSBDevices() {
         DeviceList list = new DeviceList();
         int newUsbCount = LibUsb.getDeviceList(null, list);
-        //Bad idea, but cannot figure out how to call exit from another thread.
         if (newUsbCount < 0) {
             throw new LibUsbException("Unable to get device list", newUsbCount);
         }
