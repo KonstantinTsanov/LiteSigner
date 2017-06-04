@@ -19,7 +19,7 @@ import javax.swing.SwingUtilities;
 import lombok.extern.java.Log;
 
 /**
- * Used to ask the user to input PIN 
+ * Asks the user to input PIN.
  *
  * @author Konstantin Tsanov <k.tsanov@gmail.com>
  */
