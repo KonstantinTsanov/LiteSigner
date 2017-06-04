@@ -68,7 +68,6 @@ public class DeviceManager {
 
     public synchronized Map<String, Entry<Integer, File>> scanForUSBDevices() throws PKCS11Exception {
         int newUSBCount = countAttachedUSBDevices();
-        System.out.println(newUSBCount);
         if (newUSBCount > attachedUSBCount) {
             attachedUSBCount = newUSBCount;
             return scanAllDirectories();
