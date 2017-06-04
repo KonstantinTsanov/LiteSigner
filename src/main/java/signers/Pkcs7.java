@@ -8,15 +8,11 @@ package signers;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.Security;
-import java.security.Signature;
 import java.security.UnrecoverableKeyException;
-import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
@@ -67,7 +63,7 @@ public class Pkcs7 extends Signer {
         try {
             Objects.requireNonNull(_input);
             Objects.requireNonNull(_output);
-            
+
             X509Certificate cert;
             cert = (X509Certificate) _pkcs1x.get_certKeyStore().getCertificate(_alias);
             List certList = new ArrayList();
@@ -79,6 +75,7 @@ public class Pkcs7 extends Signer {
             ContentSigner sha1Signer = new JcaContentSignerBuilder("SHA1withRSA")
                     .setProvider(_pkcs1x.get_provider()).build((PrivateKey) _pkcs1x.get_certKeyStore()
                     .getKey(_alias, pin));
+            //todo
             Security.addProvider(new BouncyCastleProvider());
             CMSSignedDataGenerator gen = new CMSSignedDataGenerator();
             gen.addSignerInfoGenerator(new JcaSignerInfoGeneratorBuilder(new JcaDigestCalculatorProviderBuilder().setProvider("BC").build()).build(sha1Signer, cert));
@@ -91,7 +88,7 @@ public class Pkcs7 extends Signer {
                 fileOuputStream.write(sigData.getEncoded());
                 fileOuputStream.flush();
             }
-
+//TODO
         } catch (CertificateEncodingException ex) {
             Logger.getLogger(Pkcs7.class.getName()).log(Level.SEVERE, null, ex);
         } catch (KeyStoreException ex) {
