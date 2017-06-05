@@ -5,6 +5,7 @@
  */
 package pkcs;
 
+import java.security.KeyStoreException;
 import java.security.cert.X509Certificate;
 import java.util.List;
 
@@ -15,7 +16,7 @@ import java.util.List;
 public class Pkcs12 extends Pkcs1_ {
 
     @Override
-    public void login() {
+    public void login() throws KeyStoreException {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
     //TODO
