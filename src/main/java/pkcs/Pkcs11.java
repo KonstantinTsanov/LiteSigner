@@ -29,6 +29,12 @@ public class Pkcs11 extends Pkcs1_ {
     private final long _slotId;
     private static int pluggedCount = 0;
 
+    /**
+     * Creates new Pkcs11 instance using specified slotId and driver.
+     *
+     * @param slotId the id of the slot in which the device has been plugged in.
+     * @param driver
+     */
     public Pkcs11(long slotId, File driver) {
         Objects.requireNonNull(driver, "Driver must not be null!");
         _driver = driver;
@@ -37,8 +43,7 @@ public class Pkcs11 extends Pkcs1_ {
     }
 
     private void registerProvider() {
-        String pkcs11Config = String.format("name=%s\nlibrary=%s", "SmartCard" + pluggedCount++, _driver, _slotId);
-        //String pkcs11Config = "name = SmartCardUtil\nlibrary = C:\\WINDOWS\\System32\\acospkcs11.dll";
+        String pkcs11Config = String.format("name=%s\nlibrary=%s\nslotListIndex=%d", "SmartCard" + pluggedCount++, _driver, _slotId);
         ByteArrayInputStream configStream = new ByteArrayInputStream(pkcs11Config.getBytes());
         _provider = new sun.security.pkcs11.SunPKCS11(configStream);
         Security.addProvider(_provider);
@@ -49,14 +54,14 @@ public class Pkcs11 extends Pkcs1_ {
     }
 
     @Override
-    public final void login() {
+    public final void login() throws KeyStoreException {
         _chp = new KeyStore.CallbackHandlerProtection(_guiHandler);
         _builder = KeyStore.Builder.newInstance("PKCS11", _provider, _chp);
         try {
             _certKeyStore = _builder.getKeyStore();
         } catch (KeyStoreException ex) {
-            log.log(Level.SEVERE, "Error occured during operation!", ex);
-            throw new RuntimeException(ex);
+            log.log(Level.SEVERE, "Error occured during login!", ex);
+            throw ex;
         }
     }
 
