@@ -42,5 +42,5 @@ public abstract class Pkcs1_ {
 
     public abstract X509Certificate getCertificate(String alias);
 
-    public abstract void login();
+    public abstract void login() throws KeyStoreException;
 }
