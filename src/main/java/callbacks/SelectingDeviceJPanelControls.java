@@ -17,8 +17,6 @@ public interface SelectingDeviceJPanelControls {
 
     public DefaultListModel<String> getTokensModel();
 
-    public JList<String> getTokensList();
-
     public JFrame getParent();
 
 }
