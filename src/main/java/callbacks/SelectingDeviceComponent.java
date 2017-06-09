@@ -17,6 +17,6 @@ public interface SelectingDeviceComponent {
 
     public DefaultListModel<String> getTokensModel();
 
-    public JFrame getParent();
+    public JFrame getComponentParent();
 
 }
