@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package tools;
+package core;
 
 import callbacks.GuiPasswordCallback;
 import java.io.File;
@@ -19,7 +19,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.swing.DefaultListModel;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
@@ -27,6 +26,7 @@ import lombok.extern.java.Log;
 import pkcs.Pkcs11;
 import sun.security.pkcs11.wrapper.PKCS11Exception;
 import callbacks.SelectingDeviceComponent;
+import tools.DeviceManager;
 
 /**
  * Manages all Pkcs11 instances
