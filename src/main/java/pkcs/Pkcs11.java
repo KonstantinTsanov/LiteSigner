@@ -27,16 +27,20 @@ public class Pkcs11 extends Pkcs1_ {
 
     private final File _driver;
     private final long _slotId;
+    private final String slotDescription;
+
     private static int pluggedCount = 0;
 
     /**
      * Creates new Pkcs11 instance using specified slotId and driver.
      *
-     * @param slotId the id of the slot in which the device has been plugged in.
-     * @param driver
+     * @param slotDescription Description of the slot.
+     * @param slotId The id of the slot in which the device has been plugged in.
+     * @param driver Driver to be used with the slot.
      */
-    public Pkcs11(long slotId, File driver) {
+    public Pkcs11(String slotDescription, long slotId, File driver) {
         Objects.requireNonNull(driver, "Driver must not be null!");
+        this.slotDescription = slotDescription;
         _driver = driver;
         _slotId = slotId;
         registerProvider();
@@ -63,6 +67,10 @@ public class Pkcs11 extends Pkcs1_ {
             log.log(Level.SEVERE, "Error occured during login!", ex);
             throw ex;
         }
+    }
+
+    public String getSlotDescription() {
+        return slotDescription;
     }
 
     public List<X509Certificate> listCertificates() {

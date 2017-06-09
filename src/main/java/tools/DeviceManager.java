@@ -66,6 +66,15 @@ public class DeviceManager {
         }
     }
 
+    /**
+     * Scans for ANY changes in the USB devices count. If any changes are
+     * present invokes additional methods. If no changes are present returns
+     * null.
+     *
+     * @return List of currently attached usb tokens if any USB changes have
+     * been detected or null otherwise.
+     * @throws PKCS11Exception
+     */
     public synchronized Map<String, Entry<Integer, File>> scanForUSBDevices() throws PKCS11Exception {
         int newUSBCount = countAttachedUSBDevices();
         if (newUSBCount > attachedUSBCount) {
@@ -146,6 +155,7 @@ public class DeviceManager {
 
     /**
      * Counts all currently attached to the computer USB devices.
+     *
      * @return number of currently attached USB devices.
      */
     private int countAttachedUSBDevices() {

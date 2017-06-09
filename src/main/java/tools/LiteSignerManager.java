@@ -6,7 +6,6 @@
 package tools;
 
 import callbacks.GuiPasswordCallback;
-import callbacks.SelectingDeviceJPanelControls;
 import java.io.File;
 import java.security.KeyStoreException;
 import java.util.ArrayList;
@@ -14,17 +13,20 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.DefaultListModel;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 import lombok.extern.java.Log;
 import pkcs.Pkcs11;
 import sun.security.pkcs11.wrapper.PKCS11Exception;
+import callbacks.SelectingDeviceComponent;
 
 /**
  * Manages all Pkcs11 instances
@@ -40,12 +42,12 @@ public class LiteSignerManager {
 
     private static LiteSignerManager singleton = new LiteSignerManager();
 
-    private SelectingDeviceJPanelControls selectingDeviceJPanel;
+    private SelectingDeviceComponent selectingDeviceJPanel;
 
     private GuiPasswordCallback passwordCallback;
     private final String loggedIn = " - Logged In";
     //Must be able to control both description and the entry containing slotIndex and driver
-    Map<String, Map.Entry<Integer, File>> tokensList = new HashMap<>();
+    Map<String, Map.Entry<Integer, File>> slotList = new HashMap<>();
 
     /**
      * Must be called before executing other methods in the class.
@@ -55,7 +57,7 @@ public class LiteSignerManager {
      * @param passwordCallback The implementation of the GuiPasswordCallback
      * interface.
      */
-    public void setComponents(SelectingDeviceJPanelControls selectingDeviceJPanel, GuiPasswordCallback passwordCallback) {
+    public void setComponents(SelectingDeviceComponent selectingDeviceJPanel, GuiPasswordCallback passwordCallback) {
         this.selectingDeviceJPanel = selectingDeviceJPanel;
         this.passwordCallback = passwordCallback;
     }
@@ -68,23 +70,35 @@ public class LiteSignerManager {
         return singleton;
     }
 
-    public void deviceLogIn(String selectedFromList) {
+    public void deviceLogIn(String slotDescription) {
         logInExec.submit(new Runnable() {
             @Override
             public void run() {
-                Map.Entry<Integer, File> selectedDevice = tokensList.get(selectedFromList);
-                Pkcs11 smartcard = new Pkcs11(selectedDevice.getKey(), selectedDevice.getValue());
+                Entry<Integer, File> selectedSlot = slotList.get(slotDescription);
+                Pkcs11 smartcard = new Pkcs11(slotDescription, selectedSlot.getKey(), selectedSlot.getValue());
                 smartcard.initGuiHandler(passwordCallback);
                 try {
                     smartcard.login();
+                    pkcs11Instances.add(smartcard);
+                    SwingUtilities.invokeLater(new Runnable() {
+                        @Override
+                        public void run() {
+                            DefaultListModel<String> model = selectingDeviceJPanel.getTokensModel();
+                            model
+                                    .setElementAt(model
+                                            .elementAt(model
+                                                    .indexOf(slotDescription))
+                                            .concat(loggedIn), model.indexOf(slotDescription));
+                        }
+                    });
                     //TODO FIX
-                    selectingDeviceJPanel.getTokensModel().
-                            setElementAt(tokensModel.elementAt(tokensModel.indexOf(selectedFromTheList)).concat(loggedIn), tokensModel.indexOf(selectedFromTheList));
+//                    
                 } catch (KeyStoreException ex) {
                     SwingUtilities.invokeLater(() -> {
                         JOptionPane.showMessageDialog(selectingDeviceJPanel.getParent(), "There is a problem with the device.");
                     });
                 }
+                selectingDeviceJPanel.getParent().repaint();
             }
         });
     }
@@ -101,17 +115,25 @@ public class LiteSignerManager {
                 try {
                     Map<String, Map.Entry<Integer, File>> freshDeviceList = DeviceManager.getInstance().scanForUSBDevices();
                     if (freshDeviceList != null) {
+                        for (Iterator<Pkcs11> it = pkcs11Instances.iterator(); it.hasNext();) {
+                            String slotDescription = it.next().getSlotDescription();
+                            if (slotList.containsKey(slotDescription) == false) {
+                                it.remove();
+                            }
+                        }
                         //todo
                         SwingUtilities.invokeLater(() -> {
                             freshDeviceList.forEach((description, indexAndDriver) -> {
-                                if (tokensList.containsKey(description) == false) {
-                                    tokensList.put(description, indexAndDriver);
+                                if (slotList.containsKey(description) == false) {
+                                    slotList.put(description, indexAndDriver);
+                                    //throws nullpointer at addelement
                                     selectingDeviceJPanel.getTokensModel().addElement(description);
                                 }
                             });
-                            for (Iterator<Map.Entry<String, Map.Entry<Integer, File>>> it = tokensList.entrySet().iterator(); it.hasNext();) {
+                            for (Iterator<Map.Entry<String, Map.Entry<Integer, File>>> it = slotList.entrySet().iterator(); it.hasNext();) {
                                 String description = it.next().getKey();
                                 if (freshDeviceList.containsKey(description) == false) {
+                                    //throws nullpointer
                                     it.remove();
                                     selectingDeviceJPanel.getTokensModel().removeElement(description);
                                     //remove logged in

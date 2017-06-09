@@ -13,7 +13,7 @@ import javax.swing.JList;
  *
  * @author Konstantin Tsanov <k.tsanov@gmail.com>
  */
-public interface SelectingDeviceJPanelControls {
+public interface SelectingDeviceComponent {
 
     public DefaultListModel<String> getTokensModel();
 
