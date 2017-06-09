@@ -95,10 +95,10 @@ public class LiteSignerManager {
 //                    
                 } catch (KeyStoreException ex) {
                     SwingUtilities.invokeLater(() -> {
-                        JOptionPane.showMessageDialog(selectingDeviceJPanel.getParent(), "There is a problem with the device.");
+                        JOptionPane.showMessageDialog(selectingDeviceJPanel.getComponentParent(), "There is a problem with the device.");
                     });
                 }
-                selectingDeviceJPanel.getParent().repaint();
+                selectingDeviceJPanel.getComponentParent().repaint();
             }
         });
     }
@@ -144,7 +144,7 @@ public class LiteSignerManager {
                     }
                 } catch (PKCS11Exception ex) {
                     SwingUtilities.invokeLater(() -> {
-                        JOptionPane.showMessageDialog(selectingDeviceJPanel.getParent(), "There is a problem with the device.");
+                        JOptionPane.showMessageDialog(selectingDeviceJPanel.getComponentParent(), "There is a problem with the device.");
                     });
                 }
 
