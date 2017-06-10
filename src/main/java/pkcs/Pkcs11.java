@@ -16,7 +16,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.security.auth.login.LoginException;
 import lombok.extern.java.Log;
+import sun.security.pkcs11.SunPKCS11;
 
 /**
  *
@@ -53,8 +56,16 @@ public class Pkcs11 extends Pkcs1_ {
         Security.addProvider(_provider);
     }
 
-    private void unregisterProvider() {
+    public void unregisterProvider() {
+        try {
+            ((SunPKCS11) _provider).logout();
+        } catch (LoginException ex) {
+            Logger.getLogger(Pkcs11.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        _provider.clear();
         Security.removeProvider(_provider.getName());
+
+        _provider = null;
     }
 
     @Override

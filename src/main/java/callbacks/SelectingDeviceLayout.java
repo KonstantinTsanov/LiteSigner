@@ -10,13 +10,24 @@ import javax.swing.JFrame;
 import javax.swing.JList;
 
 /**
+ * Contract between the window for device selection and the back-end
  *
  * @author Konstantin Tsanov <k.tsanov@gmail.com>
  */
-public interface SelectingDeviceComponent {
+public interface SelectingDeviceLayout {
 
+    /**
+     * Gets the model which lists the devices and their description on the GUI.
+     *
+     * @return Model containing list of token descriptions.
+     */
     public DefaultListModel<String> getTokensModel();
 
-    public JFrame getComponentParent();
+    /**
+     * Gets the parent in which the layout is placed.
+     *
+     * @return The parent
+     */
+    public JFrame getLayoutParent();
 
 }

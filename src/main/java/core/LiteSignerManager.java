@@ -25,8 +25,9 @@ import javax.swing.SwingUtilities;
 import lombok.extern.java.Log;
 import pkcs.Pkcs11;
 import sun.security.pkcs11.wrapper.PKCS11Exception;
-import callbacks.SelectingDeviceComponent;
 import tools.DeviceManager;
+import org.apache.commons.lang3.exception.ExceptionUtils;
+import callbacks.SelectingDeviceLayout;
 
 /**
  * Manages all Pkcs11 instances
@@ -42,7 +43,7 @@ public class LiteSignerManager {
 
     private static LiteSignerManager singleton = new LiteSignerManager();
 
-    private SelectingDeviceComponent selectingDeviceJPanel;
+    private SelectingDeviceLayout selectingDeviceJPanel;
 
     private GuiPasswordCallback passwordCallback;
     private final String loggedIn = " - Logged In";
@@ -57,7 +58,7 @@ public class LiteSignerManager {
      * @param passwordCallback The implementation of the GuiPasswordCallback
      * interface.
      */
-    public void setComponents(SelectingDeviceComponent selectingDeviceJPanel, GuiPasswordCallback passwordCallback) {
+    public void setComponents(SelectingDeviceLayout selectingDeviceJPanel, GuiPasswordCallback passwordCallback) {
         this.selectingDeviceJPanel = selectingDeviceJPanel;
         this.passwordCallback = passwordCallback;
     }
@@ -94,11 +95,18 @@ public class LiteSignerManager {
                     //TODO FIX
 //                    
                 } catch (KeyStoreException ex) {
-                    SwingUtilities.invokeLater(() -> {
-                        JOptionPane.showMessageDialog(selectingDeviceJPanel.getComponentParent(), "There is a problem with the device.");
-                    });
+                    if ("CKR_PIN_INCORRECT".equals(ExceptionUtils.getRootCause(ex).getLocalizedMessage())) {
+                        SwingUtilities.invokeLater(() -> {
+                            JOptionPane.showMessageDialog(selectingDeviceJPanel.getLayoutParent(), "Incorrect PIN!");
+                        });
+                    } else {
+                        SwingUtilities.invokeLater(() -> {
+                            JOptionPane.showMessageDialog(selectingDeviceJPanel.getLayoutParent(), "There is a problem with the device.");
+                        });
+                    }
+                } finally {
+                    smartcard.unregisterProvider();
                 }
-                selectingDeviceJPanel.getComponentParent().repaint();
             }
         });
     }
@@ -144,7 +152,7 @@ public class LiteSignerManager {
                     }
                 } catch (PKCS11Exception ex) {
                     SwingUtilities.invokeLater(() -> {
-                        JOptionPane.showMessageDialog(selectingDeviceJPanel.getComponentParent(), "There is a problem with the device.");
+                        JOptionPane.showMessageDialog(selectingDeviceJPanel.getLayoutParent(), "There is a problem with the device.");
                     });
                 }
 
