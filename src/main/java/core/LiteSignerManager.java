@@ -27,7 +27,9 @@ import pkcs.Pkcs11;
 import sun.security.pkcs11.wrapper.PKCS11Exception;
 import tools.DeviceManager;
 import org.apache.commons.lang3.exception.ExceptionUtils;
-import callbacks.SelectingDeviceLayout;
+import java.util.Locale;
+import java.util.ResourceBundle;
+import callbacks.SelectingDevicePanel;
 
 /**
  * Manages all Pkcs11 instances
@@ -37,14 +39,15 @@ import callbacks.SelectingDeviceLayout;
 @Log
 public class LiteSignerManager {
 
-    private ExecutorService logInExec = Executors.newFixedThreadPool(1);
+    private final ExecutorService logInExec = Executors.newFixedThreadPool(1);
     private final ScheduledExecutorService deviceScanner = Executors.newSingleThreadScheduledExecutor();
-    private List<Pkcs11> pkcs11Instances = new ArrayList<>();
+    private final List<Pkcs11> pkcs11Instances = new ArrayList<>();
 
-    private static LiteSignerManager singleton = new LiteSignerManager();
+    private static final LiteSignerManager singleton = new LiteSignerManager();
 
-    private SelectingDeviceLayout selectingDeviceJPanel;
+    private SelectingDevicePanel selectingDevicePanel;
 
+    private Locale currentLocale;
     private GuiPasswordCallback passwordCallback;
     private final String loggedIn = " - Logged In";
     //Must be able to control both description and the entry containing slotIndex and driver
@@ -58,8 +61,8 @@ public class LiteSignerManager {
      * @param passwordCallback The implementation of the GuiPasswordCallback
      * interface.
      */
-    public void setComponents(SelectingDeviceLayout selectingDeviceJPanel, GuiPasswordCallback passwordCallback) {
-        this.selectingDeviceJPanel = selectingDeviceJPanel;
+    public void setComponents(SelectingDevicePanel selectingDeviceJPanel, GuiPasswordCallback passwordCallback) {
+        this.selectingDevicePanel = selectingDeviceJPanel;
         this.passwordCallback = passwordCallback;
     }
 
@@ -71,41 +74,46 @@ public class LiteSignerManager {
         return singleton;
     }
 
+    public void setLocale(Locale locale) {
+        this.currentLocale = locale;
+    }
+
     public void deviceLogIn(String slotDescription) {
-        logInExec.submit(new Runnable() {
-            @Override
-            public void run() {
-                Entry<Integer, File> selectedSlot = slotList.get(slotDescription);
-                Pkcs11 smartcard = new Pkcs11(slotDescription, selectedSlot.getKey(), selectedSlot.getValue());
-                smartcard.initGuiHandler(passwordCallback);
-                try {
-                    smartcard.login();
-                    pkcs11Instances.add(smartcard);
-                    SwingUtilities.invokeLater(new Runnable() {
-                        @Override
-                        public void run() {
-                            DefaultListModel<String> model = selectingDeviceJPanel.getTokensModel();
-                            model
-                                    .setElementAt(model
-                                            .elementAt(model
-                                                    .indexOf(slotDescription))
-                                            .concat(loggedIn), model.indexOf(slotDescription));
-                        }
+        logInExec.submit(() -> {
+            Entry<Integer, File> selectedSlot = slotList.get(slotDescription);
+            Pkcs11 smartcard = new Pkcs11(slotDescription, selectedSlot.getKey(), selectedSlot.getValue());
+            smartcard.initGuiHandler(passwordCallback);
+            try {
+                smartcard.login();
+                pkcs11Instances.add(smartcard);
+                SwingUtilities.invokeLater(() -> {
+                    DefaultListModel<String> model = selectingDevicePanel.getTokensModel();
+                    model
+                            .setElementAt(model
+                                    .elementAt(model
+                                            .indexOf(slotDescription))
+                                    .concat(loggedIn), model.indexOf(slotDescription));
+                });
+                //TODO FIX
+//
+            } catch (KeyStoreException ex) {
+                smartcard.closeSession();
+                ResourceBundle r = ResourceBundle.getBundle("CoreBundle", currentLocale);
+                if ("CKR_PIN_INCORRECT".equals(ExceptionUtils.getRootCause(ex).getLocalizedMessage())) {
+                    SwingUtilities.invokeLater(() -> {
+                        JOptionPane.showMessageDialog(selectingDevicePanel.getLayoutParent(), r.getString("LiteSignerManager.incorrectPin"),
+                                r.getString("LiteSignerManager.dialogMessage"), JOptionPane.WARNING_MESSAGE);
                     });
-                    //TODO FIX
-//                    
-                } catch (KeyStoreException ex) {
-                    if ("CKR_PIN_INCORRECT".equals(ExceptionUtils.getRootCause(ex).getLocalizedMessage())) {
-                        SwingUtilities.invokeLater(() -> {
-                            JOptionPane.showMessageDialog(selectingDeviceJPanel.getLayoutParent(), "Incorrect PIN!");
-                        });
-                    } else {
-                        SwingUtilities.invokeLater(() -> {
-                            JOptionPane.showMessageDialog(selectingDeviceJPanel.getLayoutParent(), "There is a problem with the device.");
-                        });
-                    }
-                } finally {
-                    smartcard.unregisterProvider();
+                } else if ("CKR_PIN_LOCKED".equals(ExceptionUtils.getRootCause(ex).getLocalizedMessage())) {
+                    SwingUtilities.invokeLater(() -> {
+                        JOptionPane.showMessageDialog(selectingDevicePanel.getLayoutParent(), r.getString("LiteSignerManager.pinLocked"),
+                                r.getString("LiteSignerManager.dialogMessage"), JOptionPane.WARNING_MESSAGE);
+                    });
+                } else {
+                    SwingUtilities.invokeLater(() -> {
+                        JOptionPane.showMessageDialog(selectingDevicePanel.getLayoutParent(),
+                                r.getString("LiteSignerManager.dialogMessage"), "There is a problem with the device.", JOptionPane.WARNING_MESSAGE);
+                    });
                 }
             }
         });
@@ -135,7 +143,7 @@ public class LiteSignerManager {
                                 if (slotList.containsKey(description) == false) {
                                     slotList.put(description, indexAndDriver);
                                     //throws nullpointer at addelement
-                                    selectingDeviceJPanel.getTokensModel().addElement(description);
+                                    selectingDevicePanel.getTokensModel().addElement(description);
                                 }
                             });
                             for (Iterator<Map.Entry<String, Map.Entry<Integer, File>>> it = slotList.entrySet().iterator(); it.hasNext();) {
@@ -143,16 +151,16 @@ public class LiteSignerManager {
                                 if (freshDeviceList.containsKey(description) == false) {
                                     //throws nullpointer
                                     it.remove();
-                                    selectingDeviceJPanel.getTokensModel().removeElement(description);
+                                    selectingDevicePanel.getTokensModel().removeElement(description);
                                     //remove logged in
-                                    selectingDeviceJPanel.getTokensModel().removeElement(description.concat(loggedIn));
+                                    selectingDevicePanel.getTokensModel().removeElement(description.concat(loggedIn));
                                 }
                             }
                         });
                     }
                 } catch (PKCS11Exception ex) {
                     SwingUtilities.invokeLater(() -> {
-                        JOptionPane.showMessageDialog(selectingDeviceJPanel.getLayoutParent(), "There is a problem with the device.");
+                        JOptionPane.showMessageDialog(selectingDevicePanel.getLayoutParent(), "There is a problem with the device.");
                     });
                 }
 
