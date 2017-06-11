@@ -56,16 +56,16 @@ public class Pkcs11 extends Pkcs1_ {
         Security.addProvider(_provider);
     }
 
-    public void unregisterProvider() {
+    public void closeSession() {
         try {
             ((SunPKCS11) _provider).logout();
         } catch (LoginException ex) {
             Logger.getLogger(Pkcs11.class.getName()).log(Level.SEVERE, null, ex);
         }
-        _provider.clear();
         Security.removeProvider(_provider.getName());
-
+        _provider.clear();
         _provider = null;
+        pluggedCount--;
     }
 
     @Override
