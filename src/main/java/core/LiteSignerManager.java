@@ -5,6 +5,7 @@
  */
 package core;
 
+import callbacks.CertificatePanel;
 import callbacks.GuiPasswordCallback;
 import java.io.File;
 import java.security.KeyStoreException;
@@ -30,6 +31,19 @@ import org.apache.commons.lang3.exception.ExceptionUtils;
 import java.util.Locale;
 import java.util.ResourceBundle;
 import callbacks.DevicePanel;
+import java.security.cert.CertificateEncodingException;
+import java.security.cert.X509Certificate;
+import java.text.SimpleDateFormat;
+import java.time.format.DateTimeFormatter;
+import java.util.Date;
+import java.util.Objects;
+import java.util.Vector;
+import java.util.logging.Logger;
+import org.bouncycastle.asn1.x500.RDN;
+import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.asn1.x500.style.BCStyle;
+import org.bouncycastle.asn1.x500.style.IETFUtils;
+import org.bouncycastle.cert.jcajce.JcaX509CertificateHolder;
 
 /**
  * Manages all Pkcs11 instances
@@ -40,12 +54,14 @@ import callbacks.DevicePanel;
 public class LiteSignerManager {
 
     private final ExecutorService logInExec = Executors.newFixedThreadPool(1);
+    private final ExecutorService certificateDisplayExec = Executors.newFixedThreadPool(1);
     private final ScheduledExecutorService deviceScanner = Executors.newSingleThreadScheduledExecutor();
     private final List<Pkcs11> pkcs11Instances = new ArrayList<>();
 
     private static final LiteSignerManager singleton = new LiteSignerManager();
 
-    private DevicePanel selectingDevicePanel;
+    private DevicePanel devicePanel;
+    private CertificatePanel certificatePanel;
 
     private Locale currentLocale;
     private GuiPasswordCallback passwordCallback;
@@ -56,13 +72,14 @@ public class LiteSignerManager {
     /**
      * Must be called before executing other methods in the class.
      *
-     * @param selectingDeviceJPanel The output jframe for the device scanner and
-     * the input for the device selection.
-     * @param passwordCallback The implementation of the GuiPasswordCallback
+     * @param devicePanel The implementation of the GuiPasswordCallback
      * interface.
+     * @param certificatePanel
+     * @param passwordCallback
      */
-    public void setComponents(DevicePanel selectingDeviceJPanel, GuiPasswordCallback passwordCallback) {
-        this.selectingDevicePanel = selectingDeviceJPanel;
+    public void setComponents(DevicePanel devicePanel, CertificatePanel certificatePanel, GuiPasswordCallback passwordCallback) {
+        this.devicePanel = devicePanel;
+        this.certificatePanel = certificatePanel;
         this.passwordCallback = passwordCallback;
     }
 
@@ -79,41 +96,48 @@ public class LiteSignerManager {
     }
 
     public void deviceLogIn(String slotDescription) {
+        Objects.requireNonNull(slotDescription);
         logInExec.submit(() -> {
-            Entry<Integer, File> selectedSlot = slotList.get(slotDescription);
-            Pkcs11 smartcard = new Pkcs11(slotDescription, selectedSlot.getKey(), selectedSlot.getValue());
-            smartcard.initGuiHandler(passwordCallback);
-            try {
-                smartcard.login();
-                pkcs11Instances.add(smartcard);
-                SwingUtilities.invokeLater(() -> {
-                    DefaultListModel<String> model = selectingDevicePanel.getTokensModel();
-                    model
-                            .setElementAt(model
-                                    .elementAt(model
-                                            .indexOf(slotDescription))
-                                    .concat(loggedIn), model.indexOf(slotDescription));
-                });
-                //TODO FIX
+            if (getInstanceIfExists(slotDescription) == null) {
+                Entry<Integer, File> selectedSlot = slotList.get(slotDescription);
+                Pkcs11 smartcard = new Pkcs11(slotDescription, selectedSlot.getKey(), selectedSlot.getValue());
+                smartcard.initGuiHandler(passwordCallback);
+                try {
+                    smartcard.login();
+                    pkcs11Instances.add(smartcard);
+                    printCertificates(smartcard);
+                    SwingUtilities.invokeLater(() -> {
+                        DefaultListModel<String> model = devicePanel.getTokensModel();
+                        model
+                                .setElementAt(model
+                                        .elementAt(model
+                                                .indexOf(slotDescription))
+                                        .concat(loggedIn), model.indexOf(slotDescription));
+                    });
+                    //TODO FIX
 //
-            } catch (KeyStoreException ex) {
-                smartcard.closeSession();
-                ResourceBundle r = ResourceBundle.getBundle("CoreBundle", currentLocale);
-                if ("CKR_PIN_INCORRECT".equals(ExceptionUtils.getRootCause(ex).getLocalizedMessage())) {
-                    SwingUtilities.invokeLater(() -> {
-                        JOptionPane.showMessageDialog(selectingDevicePanel.getLayoutParent(), r.getString("LiteSignerManager.incorrectPin"),
-                                r.getString("LiteSignerManager.dialogMessage"), JOptionPane.WARNING_MESSAGE);
-                    });
-                } else if ("CKR_PIN_LOCKED".equals(ExceptionUtils.getRootCause(ex).getLocalizedMessage())) {
-                    SwingUtilities.invokeLater(() -> {
-                        JOptionPane.showMessageDialog(selectingDevicePanel.getLayoutParent(), r.getString("LiteSignerManager.pinLocked"),
-                                r.getString("LiteSignerManager.dialogMessage"), JOptionPane.WARNING_MESSAGE);
-                    });
-                } else {
-                    SwingUtilities.invokeLater(() -> {
-                        JOptionPane.showMessageDialog(selectingDevicePanel.getLayoutParent(),
-                                r.getString("LiteSignerManager.dialogMessage"), "There is a problem with the device.", JOptionPane.WARNING_MESSAGE);
-                    });
+                } catch (KeyStoreException ex) {
+                    smartcard.closeSession();
+                    ResourceBundle r = ResourceBundle.getBundle("CoreBundle", currentLocale);
+                    if ("CKR_PIN_INCORRECT".equals(ExceptionUtils.getRootCause(ex).getLocalizedMessage())) {
+                        SwingUtilities.invokeLater(() -> {
+                            JOptionPane.showMessageDialog(devicePanel.getPanelParent(), r.getString("LiteSignerManager.incorrectPin"),
+                                    r.getString("LiteSignerManager.dialogMessage"), JOptionPane.WARNING_MESSAGE);
+                        });
+                    } else if ("CKR_PIN_LOCKED".equals(ExceptionUtils.getRootCause(ex).getLocalizedMessage())) {
+                        SwingUtilities.invokeLater(() -> {
+                            JOptionPane.showMessageDialog(devicePanel.getPanelParent(), r.getString("LiteSignerManager.pinLocked"),
+                                    r.getString("LiteSignerManager.dialogMessage"), JOptionPane.WARNING_MESSAGE);
+                        });
+                    } else {
+                        SwingUtilities.invokeLater(() -> {
+                            JOptionPane.showMessageDialog(devicePanel.getPanelParent(),
+                                    r.getString("LiteSignerManager.dialogMessage"), "There is a problem with the device.", JOptionPane.WARNING_MESSAGE);
+                        });
+                    }
+                } catch (CertificateEncodingException ex) {
+                    //TODO
+                    Logger.getLogger(LiteSignerManager.class.getName()).log(Level.SEVERE, null, ex);
                 }
             }
         });
@@ -143,7 +167,7 @@ public class LiteSignerManager {
                                 if (slotList.containsKey(description) == false) {
                                     slotList.put(description, indexAndDriver);
                                     //throws nullpointer at addelement
-                                    selectingDevicePanel.getTokensModel().addElement(description);
+                                    devicePanel.getTokensModel().addElement(description);
                                 }
                             });
                             for (Iterator<Map.Entry<String, Map.Entry<Integer, File>>> it = slotList.entrySet().iterator(); it.hasNext();) {
@@ -151,16 +175,16 @@ public class LiteSignerManager {
                                 if (freshDeviceList.containsKey(description) == false) {
                                     //throws nullpointer
                                     it.remove();
-                                    selectingDevicePanel.getTokensModel().removeElement(description);
+                                    devicePanel.getTokensModel().removeElement(description);
                                     //remove logged in
-                                    selectingDevicePanel.getTokensModel().removeElement(description.concat(loggedIn));
+                                    devicePanel.getTokensModel().removeElement(description.concat(loggedIn));
                                 }
                             }
                         });
                     }
                 } catch (PKCS11Exception ex) {
                     SwingUtilities.invokeLater(() -> {
-                        JOptionPane.showMessageDialog(selectingDevicePanel.getLayoutParent(), "There is a problem with the device.");
+                        JOptionPane.showMessageDialog(devicePanel.getPanelParent(), "There is a problem with the device.");
                     });
                 }
 
@@ -168,6 +192,55 @@ public class LiteSignerManager {
         };
         deviceScanner.scheduleAtFixedRate(t, 0, n, TimeUnit.SECONDS);
         t.start();
+    }
+
+    public void displayCertificates(String slotDescription) {
+        Objects.requireNonNull(slotDescription);
+        certificateDisplayExec.submit(() -> {
+            Pkcs11 smartcard = getInstanceIfExists(slotDescription);
+            if (smartcard != null) {
+                try {
+                    printCertificates(smartcard);
+                } catch (CertificateEncodingException ex) {
+                    SwingUtilities.invokeLater(() -> {
+                        JOptionPane.showMessageDialog(devicePanel.getPanelParent(), "Error occured when reading certificate!");
+                    });
+                }
+            }
+        });
+    }
+
+    private void printCertificates(Pkcs11 smartcard) throws CertificateEncodingException {
+        for (X509Certificate certificate : smartcard.listCertificates()) {
+            Vector row = new Vector();
+            X500Name subject = new JcaX509CertificateHolder(certificate).getSubject();
+            RDN cn = subject.getRDNs(BCStyle.CN)[0];
+            String subjectCN = IETFUtils.valueToString(cn.getFirst().getValue());
+            row.add(subjectCN);
+            X500Name publisher = new JcaX509CertificateHolder(certificate).getIssuer();
+            RDN cn1 = publisher.getRDNs(BCStyle.CN)[0];
+            String issuerCN = IETFUtils.valueToString(cn1.getFirst().getValue());
+            row.add(issuerCN);
+
+            SimpleDateFormat formatter = new SimpleDateFormat("dd-MM-yyyy kk:mm z");
+            Date date = certificate.getNotBefore();
+            String format = formatter.format(date);
+            row.add(format);
+            certificatePanel.getTableModel().addRow(row);
+        }
+    }
+
+    public void clearCertificateList() {
+        certificatePanel.getTableModel().setRowCount(0);
+    }
+
+    private Pkcs11 getInstanceIfExists(String slotDescription) {
+        for (Pkcs11 instance : pkcs11Instances) {
+            if (instance.getSlotDescription().equals(slotDescription)) {
+                return instance;
+            }
+        }
+        return null;
     }
 
     public void cancelDeviceScanner() {

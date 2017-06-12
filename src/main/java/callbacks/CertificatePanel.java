@@ -5,23 +5,21 @@
  */
 package callbacks;
 
-import javax.swing.DefaultListModel;
 import javax.swing.JFrame;
-import javax.swing.JList;
+import javax.swing.table.DefaultTableModel;
 
 /**
- * Contract between the window for device selection and the back-end
  *
  * @author Konstantin Tsanov <k.tsanov@gmail.com>
  */
-public interface DevicePanel {
+public interface CertificatePanel {
 
     /**
-     * Gets the model which lists the devices and their description on the GUI.
+     * Gets the table model for the panel
      *
-     * @return Model containing list of token descriptions.
+     * @return Table model showing the certificates for the selected token
      */
-    public DefaultListModel<String> getTokensModel();
+    public DefaultTableModel getTableModel();
 
     /**
      * Gets the parent in which the panel is placed.
@@ -29,5 +27,4 @@ public interface DevicePanel {
      * @return The parent
      */
     public JFrame getPanelParent();
-
 }
