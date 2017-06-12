@@ -29,7 +29,7 @@ import tools.DeviceManager;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import java.util.Locale;
 import java.util.ResourceBundle;
-import callbacks.SelectingDevicePanel;
+import callbacks.DevicePanel;
 
 /**
  * Manages all Pkcs11 instances
@@ -45,7 +45,7 @@ public class LiteSignerManager {
 
     private static final LiteSignerManager singleton = new LiteSignerManager();
 
-    private SelectingDevicePanel selectingDevicePanel;
+    private DevicePanel selectingDevicePanel;
 
     private Locale currentLocale;
     private GuiPasswordCallback passwordCallback;
@@ -61,7 +61,7 @@ public class LiteSignerManager {
      * @param passwordCallback The implementation of the GuiPasswordCallback
      * interface.
      */
-    public void setComponents(SelectingDevicePanel selectingDeviceJPanel, GuiPasswordCallback passwordCallback) {
+    public void setComponents(DevicePanel selectingDeviceJPanel, GuiPasswordCallback passwordCallback) {
         this.selectingDevicePanel = selectingDeviceJPanel;
         this.passwordCallback = passwordCallback;
     }
