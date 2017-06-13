@@ -10,6 +10,7 @@ import java.io.File;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.Security;
+import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -27,11 +28,11 @@ import sun.security.pkcs11.SunPKCS11;
  */
 @Log
 public class Pkcs11 extends Pkcs1_ {
-
+    
     private final File _driver;
     private final long _slotId;
     private final String slotDescription;
-
+    
     private static int pluggedCount = 0;
 
     /**
@@ -48,14 +49,14 @@ public class Pkcs11 extends Pkcs1_ {
         _slotId = slotId;
         registerProvider();
     }
-
+    
     private void registerProvider() {
         String pkcs11Config = String.format("name=%s\nlibrary=%s\nslotListIndex=%d", "SmartCard" + pluggedCount++, _driver, _slotId);
         ByteArrayInputStream configStream = new ByteArrayInputStream(pkcs11Config.getBytes());
         _provider = new sun.security.pkcs11.SunPKCS11(configStream);
         Security.addProvider(_provider);
     }
-
+    
     public void closeSession() {
         try {
             ((SunPKCS11) _provider).logout();
@@ -67,7 +68,7 @@ public class Pkcs11 extends Pkcs1_ {
         _provider = null;
         pluggedCount--;
     }
-
+    
     @Override
     public final void login() throws KeyStoreException {
         _chp = new KeyStore.CallbackHandlerProtection(_guiHandler);
@@ -79,11 +80,19 @@ public class Pkcs11 extends Pkcs1_ {
             throw ex;
         }
     }
-
+    
     public String getSlotDescription() {
         return slotDescription;
     }
-
+    
+    public Certificate[] getCertificateChain(String alias) throws KeyStoreException {
+        return _certKeyStore.getCertificateChain(alias);
+    }
+    
+    public String getCertificateAlias(Certificate cert) throws KeyStoreException {
+        return _certKeyStore.getCertificateAlias(cert);
+    }
+    
     public List<X509Certificate> listCertificates() {
         List<X509Certificate> list = new ArrayList<>();
         try {
@@ -105,7 +114,7 @@ public class Pkcs11 extends Pkcs1_ {
         }
         return list;
     }
-
+    
     @Override
     public List<String> listAliases() {
         try {
@@ -115,7 +124,7 @@ public class Pkcs11 extends Pkcs1_ {
             throw new RuntimeException("Keystore not loaded!", ex);
         }
     }
-
+    
     @Override
     public X509Certificate getCertificate(String alias) {
         try {

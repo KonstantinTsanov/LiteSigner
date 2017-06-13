@@ -8,6 +8,8 @@ package callbacks;
 import javax.swing.DefaultListModel;
 import javax.swing.JFrame;
 import javax.swing.JList;
+import javax.swing.JTable;
+import javax.swing.table.DefaultTableModel;
 
 /**
  * Contract between the window for device selection and the back-end
@@ -21,7 +23,7 @@ public interface DevicePanel {
      *
      * @return Model containing list of token descriptions.
      */
-    public DefaultListModel<String> getTokensModel();
+    public DefaultTableModel getTokensModel();
 
     /**
      * Gets the parent in which the panel is placed.
@@ -29,5 +31,7 @@ public interface DevicePanel {
      * @return The parent
      */
     public JFrame getPanelParent();
+
+    public JTable getTokensTable();
 
 }

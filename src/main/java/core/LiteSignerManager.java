@@ -20,7 +20,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
-import javax.swing.DefaultListModel;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 import lombok.extern.java.Log;
@@ -34,11 +33,12 @@ import callbacks.DevicePanel;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
 import java.text.SimpleDateFormat;
-import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.Objects;
 import java.util.Vector;
 import java.util.logging.Logger;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableModel;
 import org.bouncycastle.asn1.x500.RDN;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x500.style.BCStyle;
@@ -65,7 +65,8 @@ public class LiteSignerManager {
 
     private Locale currentLocale;
     private GuiPasswordCallback passwordCallback;
-    private final String loggedIn = " - Logged In";
+    private final String authenticated = "Logged in";
+    private final String unauthenticated = "Unauthenticated";
     //Must be able to control both description and the entry containing slotIndex and driver
     Map<String, Map.Entry<Integer, File>> slotList = new HashMap<>();
 
@@ -104,15 +105,14 @@ public class LiteSignerManager {
                 smartcard.initGuiHandler(passwordCallback);
                 try {
                     smartcard.login();
+                    if (devicePanel.getTokensTable().getSelectedRow() != -1
+                            && slotDescription.equals(devicePanel.getTokensTable().getValueAt(devicePanel.getTokensTable().getSelectedRow(), 0))) {
+                        printCertificates(smartcard);
+                    }
                     pkcs11Instances.add(smartcard);
-                    printCertificates(smartcard);
                     SwingUtilities.invokeLater(() -> {
-                        DefaultListModel<String> model = devicePanel.getTokensModel();
-                        model
-                                .setElementAt(model
-                                        .elementAt(model
-                                                .indexOf(slotDescription))
-                                        .concat(loggedIn), model.indexOf(slotDescription));
+                        DefaultTableModel model = devicePanel.getTokensModel();
+                        model.setValueAt(authenticated, getRowByValue(model, slotDescription), 1);
                     });
                     //TODO FIX
 //
@@ -131,8 +131,9 @@ public class LiteSignerManager {
                         });
                     } else {
                         SwingUtilities.invokeLater(() -> {
-                            JOptionPane.showMessageDialog(devicePanel.getPanelParent(),
-                                    r.getString("LiteSignerManager.dialogMessage"), "There is a problem with the device.", JOptionPane.WARNING_MESSAGE);
+                            //TODO use bundle
+                            JOptionPane.showMessageDialog(devicePanel.getPanelParent(), "There is a problem with the device.",
+                                    r.getString("LiteSignerManager.dialogMessage"), JOptionPane.WARNING_MESSAGE);
                         });
                     }
                 } catch (CertificateEncodingException ex) {
@@ -166,18 +167,25 @@ public class LiteSignerManager {
                             freshDeviceList.forEach((description, indexAndDriver) -> {
                                 if (slotList.containsKey(description) == false) {
                                     slotList.put(description, indexAndDriver);
-                                    //throws nullpointer at addelement
-                                    devicePanel.getTokensModel().addElement(description);
+                                    devicePanel.getTokensModel().addRow(new Object[]{description, unauthenticated});
                                 }
                             });
                             for (Iterator<Map.Entry<String, Map.Entry<Integer, File>>> it = slotList.entrySet().iterator(); it.hasNext();) {
                                 String description = it.next().getKey();
                                 if (freshDeviceList.containsKey(description) == false) {
-                                    //throws nullpointer
                                     it.remove();
-                                    devicePanel.getTokensModel().removeElement(description);
-                                    //remove logged in
-                                    devicePanel.getTokensModel().removeElement(description.concat(loggedIn));
+                                    int row = getRowByValue(devicePanel.getTokensModel(), description);
+                                    if (devicePanel.getTokensTable().getSelectedRow() == row) {
+                                        devicePanel.getTokensTable().clearSelection();
+                                    }
+                                    devicePanel.getTokensModel().removeRow(row);
+                                    if (devicePanel.getTokensTable().getRowCount() != 0) {
+                                        if (row < devicePanel.getTokensTable().getRowCount()) {
+                                            devicePanel.getTokensTable().changeSelection(row, 0, false, false);
+                                        } else if (row == devicePanel.getTokensTable().getRowCount()) {
+                                            devicePanel.getTokensTable().changeSelection(row - 1, 0, false, false);
+                                        }
+                                    }
                                 }
                             }
                         });
@@ -195,7 +203,6 @@ public class LiteSignerManager {
     }
 
     public void displayCertificates(String slotDescription) {
-        Objects.requireNonNull(slotDescription);
         certificateDisplayExec.submit(() -> {
             Pkcs11 smartcard = getInstanceIfExists(slotDescription);
             if (smartcard != null) {
@@ -203,20 +210,26 @@ public class LiteSignerManager {
                     printCertificates(smartcard);
                 } catch (CertificateEncodingException ex) {
                     SwingUtilities.invokeLater(() -> {
-                        JOptionPane.showMessageDialog(devicePanel.getPanelParent(), "Error occured when reading certificate!");
+                        JOptionPane.showMessageDialog(devicePanel.getPanelParent(), "Error occured while reading certificate!");
+                    });
+                } catch (KeyStoreException ex) {
+                    SwingUtilities.invokeLater(() -> {
+                        JOptionPane.showMessageDialog(devicePanel.getPanelParent(), "Error occured while reading certificate!");
                     });
                 }
             }
         });
     }
 
-    private void printCertificates(Pkcs11 smartcard) throws CertificateEncodingException {
+    private void printCertificates(Pkcs11 smartcard) throws CertificateEncodingException, KeyStoreException {
         for (X509Certificate certificate : smartcard.listCertificates()) {
             Vector row = new Vector();
+
             X500Name subject = new JcaX509CertificateHolder(certificate).getSubject();
             RDN cn = subject.getRDNs(BCStyle.CN)[0];
             String subjectCN = IETFUtils.valueToString(cn.getFirst().getValue());
             row.add(subjectCN);
+
             X500Name publisher = new JcaX509CertificateHolder(certificate).getIssuer();
             RDN cn1 = publisher.getRDNs(BCStyle.CN)[0];
             String issuerCN = IETFUtils.valueToString(cn1.getFirst().getValue());
@@ -232,6 +245,22 @@ public class LiteSignerManager {
 
     public void clearCertificateList() {
         certificatePanel.getTableModel().setRowCount(0);
+    }
+
+    /**
+     * Descriptions are always located on the first column
+     *
+     * @param model
+     * @param value
+     * @return
+     */
+    private int getRowByValue(TableModel model, Object value) {
+        for (int i = model.getRowCount() - 1; i >= 0; --i) {
+            if (model.getValueAt(i, 0).equals(value)) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     private Pkcs11 getInstanceIfExists(String slotDescription) {
