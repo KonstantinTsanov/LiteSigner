@@ -22,7 +22,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.PasswordCallback;
-import javax.security.auth.callback.UnsupportedCallbackException;
 import lombok.extern.java.Log;
 import org.bouncycastle.cert.jcajce.JcaCertStore;
 import org.bouncycastle.cms.CMSException;
@@ -70,8 +69,7 @@ public class Pkcs7 extends Signer {
             certList.add(cert);
             Store certs = new JcaCertStore(certList);
             CMSProcessableFile inputFile = new CMSProcessableFile(_input);
-            _pkcs1x.get_guiHandler().handle(callbacks);
-            char[] pin = ((PasswordCallback) callbacks[0]).getPassword();
+            char[] pin = _pkcs1x.get_guiPasswordCallback().getPassword();
             ContentSigner sha1Signer = new JcaContentSignerBuilder("SHA1withRSA")
                     .setProvider(_pkcs1x.get_provider()).build((PrivateKey) _pkcs1x.get_certKeyStore()
                     .getKey(_alias, pin));
@@ -97,8 +95,6 @@ public class Pkcs7 extends Signer {
         } catch (CMSException ex) {
             Logger.getLogger(Pkcs7.class.getName()).log(Level.SEVERE, null, ex);
         } catch (IOException ex) {
-            Logger.getLogger(Pkcs7.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (UnsupportedCallbackException ex) {
             Logger.getLogger(Pkcs7.class.getName()).log(Level.SEVERE, null, ex);
         } catch (NoSuchAlgorithmException ex) {
             Logger.getLogger(Pkcs7.class.getName()).log(Level.SEVERE, null, ex);
