@@ -6,6 +6,7 @@
 package callbacks;
 
 import javax.swing.JFrame;
+import javax.swing.JTable;
 import javax.swing.table.DefaultTableModel;
 
 /**
@@ -24,7 +25,14 @@ public interface CertificatePanel {
     /**
      * Gets the parent in which the panel is placed.
      *
-     * @return The parent
+     * @return The parent JFrame.
      */
     public JFrame getPanelParent();
+
+    /**
+     * Gets the JTable in which the certificates are displayed.
+     *
+     * @return The table from the GUI.
+     */
+    public JTable getCertificateTable();
 }
