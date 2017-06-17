@@ -23,6 +23,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.naming.AuthenticationException;
 import javax.security.auth.login.LoginException;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.java.Log;
 import sun.security.pkcs11.SunPKCS11;
 
@@ -36,7 +38,9 @@ public class Pkcs11 extends Pkcs1_ {
     private final File _driver;
     private final long _slotId;
     private final String slotDescription;
-
+    @Getter
+    @Setter
+    private volatile boolean locked = false;
     private static int pluggedCount = 0;
 
     /**
