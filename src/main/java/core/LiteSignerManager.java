@@ -53,6 +53,11 @@ import org.bouncycastle.asn1.x500.style.IETFUtils;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateHolder;
 import tools.CertificateVerifier;
 import callbacks.PasswordCallback;
+import enums.SignatureType;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.logging.Logger;
+import signers.Pkcs7;
 
 /**
  * Manages all Pkcs11 instances
@@ -66,6 +71,8 @@ public class LiteSignerManager {
     private final ExecutorService certificateDisplayExec = Executors.newFixedThreadPool(1);
     private final ExecutorService certificateValidatorExec = Executors.newFixedThreadPool(1);
     private final ScheduledExecutorService deviceScanner = Executors.newSingleThreadScheduledExecutor();
+    //At most 10 threads can be used to sign files at once.
+    private final ExecutorService signingExec = Executors.newFixedThreadPool(10);
     private volatile List<Pkcs11> pkcs11Instances = new ArrayList<>();
 
     private static final LiteSignerManager SINGLETON = new LiteSignerManager();
@@ -233,6 +240,52 @@ public class LiteSignerManager {
         t.start();
     }
 
+    public void signFile(SignatureType type, File input, File output, boolean timestamp, String timestampUrl) {
+        signingExec.submit(() -> {
+            Pkcs11 smartcard = getInstanceByDescription(devicePanel.getTokensTable().getValueAt(devicePanel.getTokensTable().getSelectedRow(), 0).toString());
+            ResourceBundle r = ResourceBundle.getBundle("CoreBundle", currentLocale);
+            if (smartcard.isLocked() == false) {
+                smartcard.setLocked(true);
+                if (input.exists() && input.canRead()) {
+                    if (!output.canWrite()) {
+                        if (type == SignatureType.Attached || type == SignatureType.Detached) {
+                            try {
+                                Pkcs7 signer = new Pkcs7(smartcard, currentCertificatesOnDisplay.get(certificatePanel.getCertificateTable().getSelectedRow()).getKey(),
+                                        input, output, (timestampUrl.length() == 0 ? null : new URL(timestampUrl)));
+                                System.out.println("core.LiteSignerManager.signFile()");
+                                signer.sign();
+                            } catch (MalformedURLException ex) {
+                                //TODO
+                                log.log(Level.SEVERE, null, ex);
+                            }
+                        } else if (type == SignatureType.Pdf) {
+
+                        }
+                        smartcard.setLocked(false);
+                    } else {
+                        log.log(Level.SEVERE, "No write rights for the selected output path!", output);
+                        SwingUtilities.invokeLater(() -> {
+                            JOptionPane.showMessageDialog(devicePanel.getPanelParent(), r.getString("LiteSignerManager.outputFileNotWritable"),
+                                    r.getString("LiteSignerManager.dialogMessage"), JOptionPane.ERROR_MESSAGE);
+                        });
+                    }
+                } else {
+                    log.log(Level.SEVERE, "Input file /{0}/ doesn't exist or cannot be read from!", input);
+                    SwingUtilities.invokeLater(() -> {
+                        JOptionPane.showMessageDialog(devicePanel.getPanelParent(), r.getString("LiteSignerManager.inputFileUnavailable"),
+                                r.getString("LiteSignerManager.dialogMessage"), JOptionPane.ERROR_MESSAGE);
+                    });
+                }
+            } else {
+                log.log(Level.SEVERE, "Smartcard {0} locked", smartcard.getSlotDescription());
+                SwingUtilities.invokeLater(() -> {
+                    JOptionPane.showMessageDialog(devicePanel.getPanelParent(), r.getString("LiteSignerManager.smartcardLocked"),
+                            r.getString("LiteSignerManager.dialogMessage"), JOptionPane.ERROR_MESSAGE);
+                });
+            }
+        });
+    }
+
     public void checkIfCertificateHasChain(int row) {
         certificateValidatorExec.submit(() -> {
             try {
@@ -262,6 +315,7 @@ public class LiteSignerManager {
                         printCertificates(smartcard);
                     } catch (CertificateEncodingException | KeyStoreException ex) {
                         SwingUtilities.invokeLater(() -> {
+                            //TODO
                             JOptionPane.showMessageDialog(devicePanel.getPanelParent(), "An error occured while reading certificates!");
                         });
                     }
