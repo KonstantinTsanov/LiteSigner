@@ -12,5 +12,8 @@ import java.io.File;
  * @author Konstantin Tsanov <k.tsanov@gmail.com>
  */
 public interface FileCallback {
-    File getFile();
+
+    File getInputFile();
+
+    File getOutputFile();
 }
