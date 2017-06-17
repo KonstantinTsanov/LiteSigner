@@ -75,7 +75,7 @@ public class Pkcs11 extends Pkcs1_ {
 
     @Override
     public final void login() throws KeyStoreException, IOException, NoSuchAlgorithmException, CertificateException, AuthenticationException {
-        char[] pin = _guiPasswordCallback.getPassword();
+        char[] pin = _passwordCallback.getPassword();
         if (pin != null) {
             _certKeyStore = KeyStore.getInstance("PKCS11", _provider);
             _certKeyStore.load(null, pin);

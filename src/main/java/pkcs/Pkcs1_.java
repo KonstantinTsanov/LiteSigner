@@ -6,7 +6,6 @@
 package pkcs;
 
 import java.security.KeyStore;
-import callbacks.GuiPasswordCallback;
 import java.io.IOException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
@@ -17,6 +16,7 @@ import java.util.List;
 import javax.naming.AuthenticationException;
 import lombok.Getter;
 import lombok.extern.java.Log;
+import callbacks.PasswordCallback;
 
 /**
  *
@@ -26,7 +26,7 @@ import lombok.extern.java.Log;
 public abstract class Pkcs1_ {
 
     @Getter
-    protected GuiPasswordCallback _guiPasswordCallback;
+    protected PasswordCallback _passwordCallback;
     //protected KeyStore.Builder _builder;
     @Getter
     protected KeyStore _certKeyStore;
@@ -34,8 +34,8 @@ public abstract class Pkcs1_ {
     @Getter
     protected Provider _provider;
 
-    public void initGuiHandler(GuiPasswordCallback guiPasswordCallback) {
-        _guiPasswordCallback = guiPasswordCallback;
+    public void initGuiHandler(PasswordCallback guiPasswordCallback) {
+        _passwordCallback = guiPasswordCallback;
     }
 
     public abstract List<String> listAliases() throws KeyStoreException;
