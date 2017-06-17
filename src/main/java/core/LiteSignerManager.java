@@ -6,7 +6,6 @@
 package core;
 
 import callbacks.CertificatePanel;
-import callbacks.GuiPasswordCallback;
 import java.io.File;
 import java.security.KeyStoreException;
 import java.util.ArrayList;
@@ -30,6 +29,7 @@ import org.apache.commons.lang3.exception.ExceptionUtils;
 import java.util.Locale;
 import java.util.ResourceBundle;
 import callbacks.DevicePanel;
+import callbacks.FileCallback;
 import exceptions.CertificateVerificationException;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
@@ -52,6 +52,7 @@ import org.bouncycastle.asn1.x500.style.BCStyle;
 import org.bouncycastle.asn1.x500.style.IETFUtils;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateHolder;
 import tools.CertificateVerifier;
+import callbacks.PasswordCallback;
 
 /**
  * Manages all Pkcs11 instances
@@ -67,13 +68,16 @@ public class LiteSignerManager {
     private final ScheduledExecutorService deviceScanner = Executors.newSingleThreadScheduledExecutor();
     private volatile List<Pkcs11> pkcs11Instances = new ArrayList<>();
 
-    private static final LiteSignerManager singleton = new LiteSignerManager();
+    private static final LiteSignerManager SINGLETON = new LiteSignerManager();
 
     private DevicePanel devicePanel;
     private CertificatePanel certificatePanel;
 
     private Locale currentLocale;
-    private volatile GuiPasswordCallback passwordCallback;
+
+    private volatile PasswordCallback passwordCallback;
+    private volatile FileCallback fileCallback;
+
     private final String authenticated = "Logged in";
     private final String unauthenticated = "Unauthenticated";
     //Flagging if the login thread is working.
@@ -91,11 +95,13 @@ public class LiteSignerManager {
      * interface.
      * @param certificatePanel
      * @param passwordCallback
+     * @param fileCallback
      */
-    public void setComponents(DevicePanel devicePanel, CertificatePanel certificatePanel, GuiPasswordCallback passwordCallback) {
+    public void setComponents(DevicePanel devicePanel, CertificatePanel certificatePanel, PasswordCallback passwordCallback, FileCallback fileCallback) {
         this.devicePanel = devicePanel;
         this.certificatePanel = certificatePanel;
         this.passwordCallback = passwordCallback;
+        this.fileCallback = fileCallback;
     }
 
     private LiteSignerManager() {
@@ -103,7 +109,7 @@ public class LiteSignerManager {
     }
 
     public static LiteSignerManager getInstance() {
-        return singleton;
+        return SINGLETON;
     }
 
     public void setLocale(Locale locale) {
@@ -115,7 +121,7 @@ public class LiteSignerManager {
         if (!isLoginThreadBusy) {
             logInExec.submit(() -> {
                 isLoginThreadBusy = true;
-                if (getInstanceIfExists(slotDescription) == null) {
+                if (getInstanceByDescription(slotDescription) == null) {
                     Entry<Integer, File> selectedSlot = slotList.get(slotDescription);
                     Pkcs11 smartcard = new Pkcs11(slotDescription, selectedSlot.getKey(), selectedSlot.getValue());
                     smartcard.initGuiHandler(passwordCallback);
@@ -230,7 +236,7 @@ public class LiteSignerManager {
     public void checkIfCertificateHasChain(int row) {
         certificateValidatorExec.submit(() -> {
             try {
-                Pkcs11 smartcard = getInstanceIfExists(devicePanel.getTokensTable().getValueAt(devicePanel.getTokensTable().getSelectedRow(), 0).toString());
+                Pkcs11 smartcard = getInstanceByDescription(devicePanel.getTokensTable().getValueAt(devicePanel.getTokensTable().getSelectedRow(), 0).toString());
                 if (smartcard != null) {
                     PKIXCertPathBuilderResult result = CertificateVerifier.getInstance().validateCertificate(smartcard.getCertificate(currentCertificatesOnDisplay.get(row).getKey()));
                     if (result == null) {
@@ -249,7 +255,7 @@ public class LiteSignerManager {
 
     public void displayCertificates(String slotDescription) {
         certificateDisplayExec.submit(() -> {
-            Pkcs11 smartcard = getInstanceIfExists(slotDescription);
+            Pkcs11 smartcard = getInstanceByDescription(slotDescription);
             if (smartcard != null) {
                 SwingUtilities.invokeLater(() -> {
                     try {
@@ -309,7 +315,13 @@ public class LiteSignerManager {
         return -1;
     }
 
-    private Pkcs11 getInstanceIfExists(String slotDescription) {
+    /**
+     * Returns the Pkcs11 instance with specific slot description if exists.
+     *
+     * @param slotDescription - description of the instance.
+     * @return Pkcs11 instance with slotDescription if it exists.
+     */
+    private Pkcs11 getInstanceByDescription(String slotDescription) {
         for (Pkcs11 instance : pkcs11Instances) {
             if (instance.getSlotDescription().equals(slotDescription)) {
                 return instance;
