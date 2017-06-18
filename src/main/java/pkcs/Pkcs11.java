@@ -79,7 +79,7 @@ public class Pkcs11 extends Pkcs1_ {
 
     @Override
     public final void login() throws KeyStoreException, IOException, NoSuchAlgorithmException, CertificateException, AuthenticationException {
-        char[] pin = _passwordCallback.getPassword();
+        char[] pin = _passwordCallback.getPin();
         if (pin != null) {
             _certKeyStore = KeyStore.getInstance("PKCS11", _provider);
             _certKeyStore.load(null, pin);
@@ -105,7 +105,6 @@ public class Pkcs11 extends Pkcs1_ {
         java.util.Enumeration aliases = _certKeyStore.aliases();
         while (aliases.hasMoreElements()) {
             Object alias = aliases.nextElement();
-            System.out.println(alias);
             X509Certificate cert0 = (X509Certificate) _certKeyStore.getCertificate(alias.toString());
             list.add(cert0);
         }
