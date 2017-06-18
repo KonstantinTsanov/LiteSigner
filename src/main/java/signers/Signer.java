@@ -5,7 +5,6 @@
  */
 package signers;
 
-import java.io.InputStream;
 import pkcs.Pkcs1_;
 
 /**
@@ -13,7 +12,10 @@ import pkcs.Pkcs1_;
  * @author Konstantin Tsanov <k.tsanov@gmail.com>
  */
 public abstract class Signer {
+
     protected Pkcs1_ _pkcs1x;
-    public abstract void sign();
+
+    public abstract void sign(boolean attached);
+
     public abstract void verify();
 }
