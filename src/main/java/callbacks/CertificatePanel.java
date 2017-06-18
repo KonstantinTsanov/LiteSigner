@@ -10,20 +10,21 @@ import javax.swing.JTable;
 import javax.swing.table.DefaultTableModel;
 
 /**
+ * Contract between the certificate panel on the GUI and the back-end.
  *
  * @author Konstantin Tsanov <k.tsanov@gmail.com>
  */
 public interface CertificatePanel {
 
     /**
-     * Gets the table model for the panel
+     * Gets the certificate table model.
      *
-     * @return Table model showing the certificates for the selected token
+     * @return Table model holding the certificates for the selected token.
      */
     public DefaultTableModel getTableModel();
 
     /**
-     * Gets the parent in which the panel is placed.
+     * Gets the panel's parent frame.
      *
      * @return The parent JFrame.
      */
@@ -32,7 +33,7 @@ public interface CertificatePanel {
     /**
      * Gets the JTable in which the certificates are displayed.
      *
-     * @return The table from the GUI.
+     * @return The table showing the certificates for the selected token.
      */
     public JTable getCertificateTable();
 }

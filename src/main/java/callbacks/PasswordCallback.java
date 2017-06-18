@@ -6,10 +6,16 @@
 package callbacks;
 
 /**
+ * Obtains the PIN from the user when necessary.
  *
  * @author Konstantin Tsanov <k.tsanov@gmail.com>
  */
 public interface PasswordCallback {
 
-    public char[] getPassword();
+    /**
+     * Gets the pin from the user.
+     *
+     * @return PIN.
+     */
+    public char[] getPin();
 }

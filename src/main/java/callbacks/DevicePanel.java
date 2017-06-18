@@ -5,33 +5,36 @@
  */
 package callbacks;
 
-import javax.swing.DefaultListModel;
 import javax.swing.JFrame;
-import javax.swing.JList;
 import javax.swing.JTable;
 import javax.swing.table.DefaultTableModel;
 
 /**
- * Contract between the window for device selection and the back-end
+ * Contract between the device selection panel and the back-end.
  *
  * @author Konstantin Tsanov <k.tsanov@gmail.com>
  */
 public interface DevicePanel {
 
     /**
-     * Gets the model which lists the devices and their description on the GUI.
+     * Gets the device table model.
      *
      * @return Model containing list of token descriptions.
      */
     public DefaultTableModel getTokensModel();
 
     /**
-     * Gets the parent in which the panel is placed.
+     * Gets panel's parent frame.
      *
      * @return The parent
      */
     public JFrame getPanelParent();
 
+    /**
+     * Gets the JTable in which the devices are displayed.
+     *
+     * @return The table showing the currently attached devices.
+     */
     public JTable getTokensTable();
 
 }
