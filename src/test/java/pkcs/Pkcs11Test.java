@@ -51,11 +51,10 @@ public class Pkcs11Test {
 //        smartcard.setDriver(driver);
 //        // TODO review the generated test code and remove the default call to fail.
 //    }
-
     /**
      * Test of listCertificates method, of class Pkcs11.
      */
-   // @Test
+    // @Test
 //    public void testListCertificates() {
 //        File driver = new File("C:\\WINDOWS\\System32\\acospkcs11.dll");
 //        Pkcs11 smartcard= new Pkcs11();
@@ -66,5 +65,4 @@ public class Pkcs11Test {
 //            System.out.println(cert.getSubjectX500Principal().getName());
 //        }
 //    }
-
 }

@@ -19,7 +19,6 @@ import java.security.NoSuchAlgorithmException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
-import java.util.Enumeration;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -93,15 +92,7 @@ public class TrustStoreImporter {
             KeyStore keystore = KeyStore.getInstance(KeyStore.getDefaultType());
             String password = "secured";
             keystore.load(is, password.toCharArray());
-
-            Enumeration enumeration = keystore.aliases();
-            while (enumeration.hasMoreElements()) {
-                String alias = (String) enumeration.nextElement();
-                System.out.println("alias name: " + alias);
-                Certificate certificate = keystore.getCertificate(alias);
-                System.out.println(certificate.toString());
-
-            }
+            //TODO
 
         } catch (java.security.cert.CertificateException e) {
             e.printStackTrace();
