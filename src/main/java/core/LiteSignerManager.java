@@ -55,6 +55,7 @@ import callbacks.PasswordCallback;
 import enums.SignatureType;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.logging.Logger;
 import signers.Pkcs7;
 
 /**
@@ -101,7 +102,6 @@ public class LiteSignerManager {
      * interface.
      * @param certificatePanel
      * @param passwordCallback
-     * @param fileCallback
      */
     public void setComponents(DevicePanel devicePanel, CertificatePanel certificatePanel, PasswordCallback passwordCallback) {
         this.devicePanel = devicePanel;
@@ -244,7 +244,6 @@ public class LiteSignerManager {
      * @param type - type of signature.
      * @param input - input file.
      * @param output - output file.
-     * @param timestamp
      * @param timestampUrl
      */
     public void signFile(SignatureType type, File input, File output, String timestampUrl) {
@@ -292,24 +291,46 @@ public class LiteSignerManager {
         });
     }
 
-    public void checkIfCertificateHasChain(int row) {
+    public void checkIfCertificateHasChain(X509Certificate certificate) {
         certificateValidatorExec.submit(() -> {
             try {
-                Pkcs11 smartcard = getInstanceByDescription(devicePanel.getTokensTable().getValueAt(devicePanel.getTokensTable().getSelectedRow(), 0).toString());
-                if (smartcard != null) {
-                    PKIXCertPathBuilderResult result = CertificateVerifier.getInstance().validateCertificate(smartcard.getCertificate(currentCertificatesOnDisplay.get(row).getKey()));
-                    if (result == null) {
-                        throw new CertificateVerificationException("The certificate has no certification chain!");
-                    }
+                PKIXCertPathBuilderResult result = CertificateVerifier.getInstance().validateCertificate(certificate);
+                if (result == null) {
+                    throw new CertificateVerificationException("The certificate has no certification chain!");
                 }
-            } catch (KeyStoreException ex) {
-                JOptionPane.showMessageDialog(certificatePanel.getPanelParent(), ex.getMessage());
             } catch (CertificateVerificationException ex) {
                 certificatePanel.getCertificateTable().clearSelection();
                 JOptionPane.showMessageDialog(certificatePanel.getPanelParent(), ex.getMessage());
             }
         });
 
+    }
+
+    public void verifySelectedCertificateFromTable(int row) {
+        certificateValidatorExec.submit(() -> {
+            X509Certificate certificate = getSelectedCertificateFromTable(row);
+            if (certificate != null) {
+                try {
+                    PKIXCertPathBuilderResult result = CertificateVerifier.getInstance().validateCertificate(certificate);
+                } catch (CertificateVerificationException ex) {
+                    Logger.getLogger(LiteSignerManager.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            } else {
+//todo error
+            }
+        });
+    }
+
+    private X509Certificate getSelectedCertificateFromTable(int row) {
+        Pkcs11 smartcard = getInstanceByDescription(devicePanel.getTokensTable().getValueAt(devicePanel.getTokensTable().getSelectedRow(), 0).toString());
+        if (smartcard != null) {
+            try {
+                return smartcard.getCertificate(currentCertificatesOnDisplay.get(row).getKey());
+            } catch (KeyStoreException ex) {
+                JOptionPane.showMessageDialog(certificatePanel.getPanelParent(), ex.getMessage());
+            }
+        }
+        return null;
     }
 
     public void displayCertificates(String slotDescription) {
