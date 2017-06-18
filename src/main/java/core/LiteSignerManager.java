@@ -29,7 +29,6 @@ import org.apache.commons.lang3.exception.ExceptionUtils;
 import java.util.Locale;
 import java.util.ResourceBundle;
 import callbacks.DevicePanel;
-import callbacks.FileCallback;
 import exceptions.CertificateVerificationException;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
@@ -56,11 +55,12 @@ import callbacks.PasswordCallback;
 import enums.SignatureType;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.logging.Logger;
 import signers.Pkcs7;
 
 /**
- * Manages all Pkcs11 instances
+ * Manages all threads except the EDT within the application. Takes care of all
+ * pkcs11 and pkcs7 instances as well as the device scanner and the device login
+ * functions.
  *
  * @author Konstantin Tsanov <k.tsanov@gmail.com>
  */
@@ -83,7 +83,6 @@ public class LiteSignerManager {
     private Locale currentLocale;
 
     private volatile PasswordCallback passwordCallback;
-    private volatile FileCallback fileCallback;
 
     private final String authenticated = "Logged in";
     private final String unauthenticated = "Unauthenticated";
@@ -104,11 +103,10 @@ public class LiteSignerManager {
      * @param passwordCallback
      * @param fileCallback
      */
-    public void setComponents(DevicePanel devicePanel, CertificatePanel certificatePanel, PasswordCallback passwordCallback, FileCallback fileCallback) {
+    public void setComponents(DevicePanel devicePanel, CertificatePanel certificatePanel, PasswordCallback passwordCallback) {
         this.devicePanel = devicePanel;
         this.certificatePanel = certificatePanel;
         this.passwordCallback = passwordCallback;
-        this.fileCallback = fileCallback;
     }
 
     private LiteSignerManager() {
@@ -240,35 +238,43 @@ public class LiteSignerManager {
         t.start();
     }
 
-    public void signFile(SignatureType type, File input, File output, boolean timestamp, String timestampUrl) {
+    /**
+     * Manages the sign process based on the type of signature.
+     *
+     * @param type - type of signature.
+     * @param input - input file.
+     * @param output - output file.
+     * @param timestamp
+     * @param timestampUrl
+     */
+    public void signFile(SignatureType type, File input, File output, String timestampUrl) {
         signingExec.submit(() -> {
             Pkcs11 smartcard = getInstanceByDescription(devicePanel.getTokensTable().getValueAt(devicePanel.getTokensTable().getSelectedRow(), 0).toString());
             ResourceBundle r = ResourceBundle.getBundle("CoreBundle", currentLocale);
             if (smartcard.isLocked() == false) {
                 smartcard.setLocked(true);
                 if (input.exists() && input.canRead()) {
-                    if (!output.canWrite()) {
-                        if (type == SignatureType.Attached || type == SignatureType.Detached) {
-                            try {
-                                Pkcs7 signer = new Pkcs7(smartcard, currentCertificatesOnDisplay.get(certificatePanel.getCertificateTable().getSelectedRow()).getKey(),
-                                        input, output, (timestampUrl.length() == 0 ? null : new URL(timestampUrl)));
-                                System.out.println("core.LiteSignerManager.signFile()");
-                                signer.sign();
-                            } catch (MalformedURLException ex) {
-                                //TODO
-                                log.log(Level.SEVERE, null, ex);
-                            }
-                        } else if (type == SignatureType.Pdf) {
-
+//                    if (output.canWrite()) {
+                    if (type == SignatureType.Attached || type == SignatureType.Detached) {
+                        try {
+                            Pkcs7 signer = new Pkcs7(smartcard, currentCertificatesOnDisplay.get(certificatePanel.getCertificateTable().getSelectedRow()).getKey(),
+                                    input, output, (timestampUrl == null ? null : new URL(timestampUrl)));
+                            signer.sign(type == SignatureType.Attached);
+                        } catch (MalformedURLException ex) {
+                            //TODO
+                            log.log(Level.SEVERE, null, ex);
                         }
-                        smartcard.setLocked(false);
-                    } else {
-                        log.log(Level.SEVERE, "No write rights for the selected output path!", output);
-                        SwingUtilities.invokeLater(() -> {
-                            JOptionPane.showMessageDialog(devicePanel.getPanelParent(), r.getString("LiteSignerManager.outputFileNotWritable"),
-                                    r.getString("LiteSignerManager.dialogMessage"), JOptionPane.ERROR_MESSAGE);
-                        });
+                    } else if (type == SignatureType.Pdf) {
+//todo implementation with iText
                     }
+                    smartcard.setLocked(false);
+//                    } else {
+//                        log.log(Level.SEVERE, "No write rights for the selected output path!", output);
+//                        SwingUtilities.invokeLater(() -> {
+//                            JOptionPane.showMessageDialog(devicePanel.getPanelParent(), r.getString("LiteSignerManager.outputFileNotWritable"),
+//                                    r.getString("LiteSignerManager.dialogMessage"), JOptionPane.ERROR_MESSAGE);
+//                        });
+//                    }
                 } else {
                     log.log(Level.SEVERE, "Input file /{0}/ doesn't exist or cannot be read from!", input);
                     SwingUtilities.invokeLater(() -> {
@@ -324,6 +330,12 @@ public class LiteSignerManager {
         });
     }
 
+    /**
+     *
+     * @param smartcard
+     * @throws CertificateEncodingException
+     * @throws KeyStoreException
+     */
     private void printCertificates(Pkcs11 smartcard) throws CertificateEncodingException, KeyStoreException {
         currentCertificatesOnDisplay.clear();
         for (X509Certificate certificate : smartcard.listCertificates()) {
@@ -356,8 +368,8 @@ public class LiteSignerManager {
      * Descriptions are always located on the first column. Traversing only
      * rows.
      *
-     * @param model Model to be traversed.
-     * @param description The value to be matched.
+     * @param model - model to be traversed.
+     * @param description - the value to be matched.
      * @return Index of the value to be found or -1 if the value was not found.
      */
     private int getRowByDescription(TableModel model, Object description) {
@@ -396,5 +408,4 @@ public class LiteSignerManager {
             log.log(Level.SEVERE, "Failed to clean things up before closing the application!", ex);
         }
     }
-
 }
