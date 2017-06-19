@@ -5,6 +5,10 @@
  */
 package signers;
 
+import exceptions.CertificateVerificationException;
+import exceptions.SignatureValidationException;
+import java.io.File;
+import java.io.IOException;
 import pkcs.Pkcs1_;
 
 /**
@@ -17,5 +21,5 @@ public abstract class Signer {
 
     public abstract void sign(boolean attached);
 
-    public abstract void verify();
+    public abstract String validate(File signatureOrAttached, File signedFile) throws IOException, SignatureValidationException;
 }
