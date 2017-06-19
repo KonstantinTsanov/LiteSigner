@@ -52,7 +52,9 @@ import org.bouncycastle.asn1.x500.style.IETFUtils;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateHolder;
 import tools.CertificateVerifier;
 import callbacks.PasswordCallback;
+import callbacks.SignatureVerificationPanel;
 import enums.SignatureType;
+import exceptions.SignatureValidationException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.logging.Logger;
@@ -80,8 +82,8 @@ public class LiteSignerManager {
 
     private DevicePanel devicePanel;
     private CertificatePanel certificatePanel;
-
-    private Locale currentLocale;
+    private SignatureVerificationPanel signatureVerificationPanel;
+    private Locale locale;
 
     private volatile PasswordCallback passwordCallback;
 
@@ -103,10 +105,11 @@ public class LiteSignerManager {
      * @param certificatePanel
      * @param passwordCallback
      */
-    public void setComponents(DevicePanel devicePanel, CertificatePanel certificatePanel, PasswordCallback passwordCallback) {
+    public void setComponents(DevicePanel devicePanel, CertificatePanel certificatePanel, PasswordCallback passwordCallback, SignatureVerificationPanel signatureVerificationPanel) {
         this.devicePanel = devicePanel;
         this.certificatePanel = certificatePanel;
         this.passwordCallback = passwordCallback;
+        this.signatureVerificationPanel = signatureVerificationPanel;
     }
 
     private LiteSignerManager() {
@@ -118,7 +121,7 @@ public class LiteSignerManager {
     }
 
     public void setLocale(Locale locale) {
-        this.currentLocale = locale;
+        this.locale = locale;
     }
 
     public void deviceLogIn(String slotDescription) {
@@ -130,7 +133,7 @@ public class LiteSignerManager {
                     Entry<Integer, File> selectedSlot = slotList.get(slotDescription);
                     Pkcs11 smartcard = new Pkcs11(slotDescription, selectedSlot.getKey(), selectedSlot.getValue());
                     smartcard.initGuiHandler(passwordCallback);
-                    ResourceBundle r = ResourceBundle.getBundle("CoreBundle", currentLocale);
+                    ResourceBundle r = ResourceBundle.getBundle("CoreBundle", locale);
                     try {
                         smartcard.login();
                         pkcs11Instances.add(smartcard);
@@ -249,7 +252,7 @@ public class LiteSignerManager {
     public void signFile(SignatureType type, File input, File output, String timestampUrl) {
         signingExec.submit(() -> {
             Pkcs11 smartcard = getInstanceByDescription(devicePanel.getTokensTable().getValueAt(devicePanel.getTokensTable().getSelectedRow(), 0).toString());
-            ResourceBundle r = ResourceBundle.getBundle("CoreBundle", currentLocale);
+            ResourceBundle r = ResourceBundle.getBundle("CoreBundle", locale);
             if (smartcard.isLocked() == false) {
                 smartcard.setLocked(true);
                 if (input.exists() && input.canRead()) {
@@ -257,7 +260,7 @@ public class LiteSignerManager {
                     if (type == SignatureType.Attached || type == SignatureType.Detached) {
                         try {
                             Pkcs7 signer = new Pkcs7(smartcard, currentCertificatesOnDisplay.get(certificatePanel.getCertificateTable().getSelectedRow()).getKey(),
-                                    input, output, (timestampUrl == null ? null : new URL(timestampUrl)));
+                                    input, output, (timestampUrl == null ? null : new URL(timestampUrl)), locale);
                             signer.sign(type == SignatureType.Attached);
                         } catch (MalformedURLException ex) {
                             //TODO
@@ -289,6 +292,18 @@ public class LiteSignerManager {
                 });
             }
         });
+    }
+
+    public void validateSignature(File pkcs7, File data) {
+        try {
+            Pkcs7 validator = new Pkcs7(locale);
+            String validationResult = validator.validate(pkcs7, data);
+            signatureVerificationPanel.getSignatureDetailsJTextArea().setText(validationResult);
+        } catch (IOException ex) {
+
+        } catch (SignatureValidationException ex) {
+            JOptionPane.showMessageDialog(signatureVerificationPanel.getPanelParent(), ex.getMessage());
+        }
     }
 
     public void checkIfCertificateHasChain(X509Certificate certificate) {
