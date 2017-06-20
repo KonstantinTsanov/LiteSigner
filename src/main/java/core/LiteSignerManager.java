@@ -44,7 +44,6 @@ import pkcs.Pkcs11;
 import sun.security.pkcs11.wrapper.PKCS11Exception;
 import tools.DeviceManager;
 import org.apache.commons.lang3.exception.ExceptionUtils;
-import java.util.Locale;
 import java.util.ResourceBundle;
 import callbacks.DevicePanel;
 import exceptions.CertificateVerificationException;
@@ -104,7 +103,6 @@ public class LiteSignerManager {
     private DevicePanel devicePanel;
     private CertificatePanel certificatePanel;
     private SignatureVerificationPanel signatureVerificationPanel;
-    private Locale locale;
 
     private volatile PasswordCallback passwordCallback;
     //Flagging if the login thread is working.
@@ -138,10 +136,6 @@ public class LiteSignerManager {
         return SINGLETON;
     }
 
-    public void setLocale(Locale locale) {
-        this.locale = locale;
-    }
-
     public void deviceLogIn(String slotDescription) {
         Objects.requireNonNull(slotDescription);
         if (!isLoginThreadBusy) {
@@ -151,7 +145,7 @@ public class LiteSignerManager {
                     Entry<Integer, File> selectedSlot = slotList.get(slotDescription);
                     Pkcs11 smartcard = new Pkcs11(slotDescription, selectedSlot.getKey(), selectedSlot.getValue());
                     smartcard.initGuiHandler(passwordCallback);
-                    ResourceBundle rb = ResourceBundle.getBundle("CoreBundle", locale);
+                    ResourceBundle rb = ResourceBundle.getBundle("CoreBundle");
                     try {
                         smartcard.login();
                         pkcs11Instances.add(smartcard);
@@ -235,7 +229,7 @@ public class LiteSignerManager {
                             freshDeviceList.forEach((description, indexAndDriver) -> {
                                 if (slotList.containsKey(description) == false) {
                                     slotList.put(description, indexAndDriver);
-                                    ResourceBundle rb = ResourceBundle.getBundle("CoreBundle", locale);
+                                    ResourceBundle rb = ResourceBundle.getBundle("CoreBundle");
                                     devicePanel.getTokensModel().addRow(new Object[]{description, rb.getString("LiteSignerManager.deviceUnauthenticated")});
                                 }
                             });
@@ -275,14 +269,14 @@ public class LiteSignerManager {
     public void signFile(SignatureType type, File input, File output, String timestampUrl) {
         signingExec.submit(() -> {
             Pkcs11 smartcard = getInstanceByDescription(devicePanel.getTokensTable().getValueAt(devicePanel.getTokensTable().getSelectedRow(), 0).toString());
-            ResourceBundle rb = ResourceBundle.getBundle("CoreBundle", locale);
+            ResourceBundle rb = ResourceBundle.getBundle("CoreBundle");
             if (smartcard.isLocked() == false) {
                 smartcard.setLocked(true);
                 if (input.exists() && input.canRead()) {
                     if (type == SignatureType.Attached || type == SignatureType.Detached) {
                         try {
                             Pkcs7 signer = new Pkcs7(smartcard, currentCertificatesOnDisplay.get(certificatePanel.getCertificateTable().getSelectedRow()).getKey(),
-                                    input, output, (timestampUrl == null ? null : new URL(timestampUrl)), locale);
+                                    input, output, (timestampUrl == null ? null : new URL(timestampUrl)));
                             signer.sign(type == SignatureType.Attached);
                         } catch (MalformedURLException ex) {
                             //TODO
@@ -329,7 +323,8 @@ public class LiteSignerManager {
                 String validationResult = validator.validate(pkcs7, signedData);
                 signatureVerificationPanel.getSignatureDetailsJTextArea().setText(validationResult);
             } catch (SignatureValidationException | IOException | TimestampVerificationException | CertificateVerificationException ex) {
-                JOptionPane.showMessageDialog(signatureVerificationPanel.getPanelParent(), ex.getMessage());
+                ResourceBundle rb = ResourceBundle.getBundle("CoreBundle");
+                JOptionPane.showMessageDialog(signatureVerificationPanel.getPanelParent(), ex.getMessage(), rb.getString("messageTitle"), JOptionPane.ERROR_MESSAGE);
             }
         });
     }
@@ -341,7 +336,7 @@ public class LiteSignerManager {
      * @param row - Row in the table.
      */
     public void verifySelectedCertificateFromTable(int row) {
-        ResourceBundle rb = ResourceBundle.getBundle("CoreBundle", locale);
+        ResourceBundle rb = ResourceBundle.getBundle("CoreBundle");
         certificateValidatorExec.submit(() -> {
             X509Certificate certificate = getSelectedCertificateFromTable(row);
             if (certificate != null) {
@@ -394,7 +389,7 @@ public class LiteSignerManager {
                         printCertificates(smartcard);
                     } catch (CertificateEncodingException | KeyStoreException ex) {
                         SwingUtilities.invokeLater(() -> {
-                            ResourceBundle rb = ResourceBundle.getBundle("CoreBundle", locale);
+                            ResourceBundle rb = ResourceBundle.getBundle("CoreBundle");
                             JOptionPane.showMessageDialog(devicePanel.getPanelParent(), rb.getString("LiteSignerManager.readingCertificatesError="));
                         });
                     }

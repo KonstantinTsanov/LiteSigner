@@ -53,14 +53,9 @@ import java.util.Set;
 public class CertificateVerifier {
 
     private static final CertificateVerifier singleton = new CertificateVerifier();
-    private static Locale locale;
 
     public static CertificateVerifier getInstance() {
         return singleton;
-    }
-
-    public static void setLocale(Locale locale) {
-        CertificateVerifier.locale = locale;
     }
 
     /**
@@ -74,7 +69,7 @@ public class CertificateVerifier {
      */
     public PKIXCertPathBuilderResult validateCertificate(X509Certificate certificate) throws
             CertificateVerificationException {
-        ResourceBundle rb = ResourceBundle.getBundle("CoreBundle", locale);
+        ResourceBundle rb = ResourceBundle.getBundle("CoreBundle");
         try {
             if (isSelfSigned(certificate) == true) {
                 throw new CertificateVerificationException(rb.getString("certificateVerifier.noCertificateChain"));
@@ -103,7 +98,7 @@ public class CertificateVerifier {
             return verifiedCertChain;
         } catch (CertPathBuilderException certPathEx) {
             throw new CertificateVerificationException(
-                    rb.getString("certificateVerifier.errorBuildingCertificationPath")+ certificate.getSubjectX500Principal(), certPathEx);
+                    rb.getString("certificateVerifier.errorBuildingCertificationPath") + certificate.getSubjectX500Principal(), certPathEx);
         } catch (CertificateVerificationException cvex) {
             throw cvex;
         } catch (NoSuchAlgorithmException | NoSuchProviderException | CertificateException ex) {
@@ -112,7 +107,7 @@ public class CertificateVerifier {
             );
         } catch (GeneralSecurityException ex) {
             throw new CertificateVerificationException(
-                    rb.getString("certificateVerifier.errorVerifyingCertificate")+ certificate.getSubjectX500Principal(), ex);
+                    rb.getString("certificateVerifier.errorVerifyingCertificate") + certificate.getSubjectX500Principal(), ex);
         }
     }
 

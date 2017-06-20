@@ -112,30 +112,18 @@ public class Pkcs7 extends Signer {
     private File _output;
     private String _alias;
     private URL _timestampAddress;
-    private static Locale locale = Locale.US;
     private static ResourceBundle rb = loadBundle();
 
     public Pkcs7() {
 
     }
 
-    public Pkcs7(Pkcs1_ pkcs1x, String alias, File input, File output, URL timestampAddress, Locale locale) {
-        Pkcs7.locale = locale;
+    public Pkcs7(Pkcs1_ pkcs1x, String alias, File input, File output, URL timestampAddress) {
         _pkcs1x = pkcs1x;
         _alias = alias;
         _input = input;
         _output = output;
         _timestampAddress = timestampAddress;
-    }
-
-    /**
-     * Must be called from the main Locale-controling method.
-     *
-     * @param locale - The current locale for the app must be passed here.
-     */
-    public static void setLocale(Locale locale) {
-        Pkcs7.locale = locale;
-        rb = loadBundle();
     }
 
     @Override
@@ -417,7 +405,7 @@ public class Pkcs7 extends Signer {
      * data. SignatureType.Detached if the pkcs7 file does not contain
      * encapsulated data.
      */
-    private SignatureType checkFileType(File pkcs7) throws IOException {
+    private SignatureType checkFileType(File pkcs7) throws IOException, SignatureValidationException {
         byte[] Sig_Bytes = new byte[(int) pkcs7.length()];
         try (DataInputStream in = new DataInputStream(new FileInputStream(pkcs7))) {
             in.readFully(Sig_Bytes);
@@ -434,7 +422,7 @@ public class Pkcs7 extends Signer {
             throw new FileNotFoundException(rb.getString("pkcs7FileNotFoundException"));
         } catch (CMSException ex) {
             log.log(Level.SEVERE, "An error occured while constructing the pkcs7 object!", ex);
-            throw new FileNotFoundException(rb.getString("pkcs7FileNotFoundException"));
+            throw new SignatureValidationException(rb.getString("pkcs7FileIsNotCorrect"));
         }
     }
 
@@ -444,7 +432,7 @@ public class Pkcs7 extends Signer {
      * @return Loaded bundle.
      */
     private static ResourceBundle loadBundle() {
-        ResourceBundle r = ResourceBundle.getBundle("CoreBundle", locale);
+        ResourceBundle r = ResourceBundle.getBundle("CoreBundle");
         return r;
     }
 }
