@@ -23,7 +23,9 @@ import java.security.cert.TrustAnchor;
 import java.security.cert.X509CertSelector;
 import java.security.cert.X509Certificate;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Objects;
+import java.util.ResourceBundle;
 import java.util.Set;
 
 /**
@@ -33,9 +35,14 @@ import java.util.Set;
 public class CertificateVerifier {
 
     private static final CertificateVerifier singleton = new CertificateVerifier();
+    private static Locale locale;
 
     public static CertificateVerifier getInstance() {
         return singleton;
+    }
+
+    public static void setLocale(Locale locale) {
+        CertificateVerifier.locale = locale;
     }
 
     /**
@@ -49,9 +56,10 @@ public class CertificateVerifier {
      */
     public PKIXCertPathBuilderResult validateCertificate(X509Certificate certificate) throws
             CertificateVerificationException {
+        ResourceBundle rb = ResourceBundle.getBundle("CoreBundle", locale);
         try {
             if (isSelfSigned(certificate) == true) {
-                throw new CertificateVerificationException("There's no certificate chain for the certificate!");
+                throw new CertificateVerificationException(rb.getString("certificateVerifier.noCertificateChain"));
             }
 
             // Prepare a set of trusted root CA certificates
@@ -77,18 +85,16 @@ public class CertificateVerifier {
             return verifiedCertChain;
         } catch (CertPathBuilderException certPathEx) {
             throw new CertificateVerificationException(
-                    "Error building certification path: "
-                    + certificate.getSubjectX500Principal(), certPathEx);
+                    rb.getString("certificateVerifier.errorBuildingCertificationPath")+ certificate.getSubjectX500Principal(), certPathEx);
         } catch (CertificateVerificationException cvex) {
             throw cvex;
         } catch (NoSuchAlgorithmException | NoSuchProviderException | CertificateException ex) {
             throw new CertificateVerificationException(
-                    "Error checking for selfSigned: "
-                    + certificate.getSubjectX500Principal(), ex);
+                    rb.getString("certificateVerifier.errorCheckingSelfSigned") + certificate.getSubjectX500Principal(), ex
+            );
         } catch (GeneralSecurityException ex) {
             throw new CertificateVerificationException(
-                    "Error verifying the certificate: "
-                    + certificate.getSubjectX500Principal(), ex);
+                    rb.getString("certificateVerifier.errorVerifyingCertificate")+ certificate.getSubjectX500Principal(), ex);
         }
     }
 
