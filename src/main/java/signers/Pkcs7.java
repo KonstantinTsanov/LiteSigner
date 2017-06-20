@@ -5,12 +5,16 @@
  */
 package signers;
 
+import enums.SignatureType;
 import exceptions.CertificateVerificationException;
 import exceptions.SignatureValidationException;
+import exceptions.SigningException;
+import exceptions.TimestampVerificationException;
 import exceptions.TimestampingException;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -31,6 +35,7 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.ResourceBundle;
 import java.util.logging.Level;
+import javax.naming.AuthenticationException;
 import lombok.extern.java.Log;
 import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1EncodableVector;
@@ -76,6 +81,7 @@ import org.bouncycastle.util.Store;
 import org.bouncycastle.util.StoreException;
 import pkcs.Pkcs1_;
 import tools.CertificateVerifier;
+import tools.VerifyingSignatureStatus;
 
 /**
  *
@@ -88,14 +94,15 @@ public class Pkcs7 extends Signer {
     private File _output;
     private String _alias;
     private URL _timestampAddress;
-    private Locale locale;
+    private static Locale locale = Locale.US;
+    private static ResourceBundle rb = loadBundle();
 
-    public Pkcs7(Locale locale) {
-        this.locale = locale;
+    public Pkcs7() {
+
     }
 
     public Pkcs7(Pkcs1_ pkcs1x, String alias, File input, File output, URL timestampAddress, Locale locale) {
-        this.locale = locale;
+        Pkcs7.locale = locale;
         _pkcs1x = pkcs1x;
         _alias = alias;
         _input = input;
@@ -103,11 +110,23 @@ public class Pkcs7 extends Signer {
         _timestampAddress = timestampAddress;
     }
 
+    /**
+     * Must be called from the main Locale-controling method.
+     *
+     * @param locale - The current locale for the app must be passed here.
+     */
+    public static void setLocale(Locale locale) {
+        Pkcs7.locale = locale;
+        rb = loadBundle();
+    }
+
     @Override
-    public void sign(boolean attached) {
+    public void sign(boolean attached) throws AuthenticationException, SigningException {
+        Objects.requireNonNull(_input);
+        Objects.requireNonNull(_output);
+        Objects.requireNonNull(_alias);
+        Security.addProvider(new BouncyCastleProvider());
         try {
-            Objects.requireNonNull(_input);
-            Objects.requireNonNull(_output);
 
             X509Certificate cert;
             cert = (X509Certificate) _pkcs1x.get_certKeyStore().getCertificate(_alias);
@@ -116,16 +135,15 @@ public class Pkcs7 extends Signer {
             Store certs = new JcaCertStore(certList);
             CMSProcessableFile inputFile = new CMSProcessableFile(_input);
             char[] pin = _pkcs1x.get_passwordCallback().getPin();
+            if (pin == null) {
+                throw new AuthenticationException("No pin input.");
+            }
             ContentSigner sha1Signer = new JcaContentSignerBuilder("SHA1withRSA")
                     .setProvider(_pkcs1x.get_provider()).build((PrivateKey) _pkcs1x.get_certKeyStore()
                     .getKey(_alias, pin));
-            //todo
-            Security.addProvider(new BouncyCastleProvider());
             CMSSignedDataGenerator gen = new CMSSignedDataGenerator();
             gen.addSignerInfoGenerator(new JcaSignerInfoGeneratorBuilder(new JcaDigestCalculatorProviderBuilder().setProvider("BC").build()).build(sha1Signer, cert));
-
             gen.addCertificates(certs);
-
             CMSSignedData sigData = gen.generate(inputFile, attached);
             //Timestamping
             if (_timestampAddress != null) {
@@ -150,17 +168,27 @@ public class Pkcs7 extends Signer {
                 fileOuputStream.flush();
             }
 //TODO
+        } catch (AuthenticationException ex) {
+            throw ex;
         } catch (Exception ex) {
             log.log(Level.SEVERE, "Failed to sign!", ex);
-            //TODO
+            throw new SigningException(rb.getString("signingFiled"));
         }
     }
 
-    private static TimeStampResponse timestampRequest(byte[] data, URI uri) throws TimestampingException {
+    /**
+     * Timestamp request from the server
+     *
+     * @param data
+     * @param uri
+     * @return
+     * @throws TimestampingException
+     */
+    private TimeStampResponse timestampRequest(byte[] data, URI uri) throws TimestampingException {
         try {
-            TimeStampRequestGenerator reqgen = new TimeStampRequestGenerator();
-            reqgen.setCertReq(true);
-            TimeStampRequest req = reqgen.generate(TSPAlgorithms.SHA1, data);
+            TimeStampRequestGenerator tstRequestGenerator = new TimeStampRequestGenerator();
+            tstRequestGenerator.setCertReq(true);
+            TimeStampRequest req = tstRequestGenerator.generate(TSPAlgorithms.SHA1, data);
             byte request[] = req.getEncoded();
             HttpURLConnection conn = (HttpURLConnection) uri.toURL().openConnection();
             conn.setConnectTimeout(10000);
@@ -178,87 +206,75 @@ public class Pkcs7 extends Signer {
                 throw new RuntimeException(ex);
             }
             if (conn.getResponseCode() >= 400) {
-                throw new IOException("Unable to complete the timestamping due to HTTP error: " + conn.getResponseCode() + " - " + conn.getResponseMessage());
+                throw new IOException(rb.getString("timestampingHttpError") + conn.getResponseCode() + " - " + conn.getResponseMessage());
             }
             InputStream in = conn.getInputStream();
             TimeStampResp resp = TimeStampResp.getInstance(new ASN1InputStream(in).readObject());
             TimeStampResponse response = new TimeStampResponse(resp);
             response.validate(req);
             if (response.getStatus() != 0) {
-                throw new IOException("Unable to complete the timestamping due to an invalid response (" + response.getStatusString() + ")");
+                throw new IOException(rb.getString("timestampingBadResponseError") + response.getStatusString() + ")");
             }
             return response;
         } catch (Exception ex) {
-            throw new TimestampingException("Unable to complete the timestamping", ex);
+            throw new TimestampingException(rb.getString("timestampValidationError"), ex);
         }
     }
 
     @Override
-    public String validate(File pkcs7, File signedFile) throws IOException, SignatureValidationException {
-        if (signedFile == null) {
+    public String validate(File pkcs7, File signedFile) throws FileNotFoundException,
+            SignatureValidationException,
+            TimestampVerificationException,
+            CertificateVerificationException,
+            IOException {
+        SignatureType signatureType = checkFileType(pkcs7);
+        if (signatureType == SignatureType.Attached) {
             try (InputStream is = new FileInputStream(pkcs7)) {
-                return validateAttachedSignature(is);
-            } catch (CertificateVerificationException ex) {
-                return validateDetachedSignature(pkcs7, signedFile);
+                return validateAttachedSignature(is).getStatus();
+            } catch (IOException ex) {
+                throw new FileNotFoundException(rb.getString("pkcs7FileNotFoundException"));
             }
         } else {
-            return validateDetachedSignature(pkcs7, signedFile);
+            if (signedFile == null) {
+                throw new FileNotFoundException(rb.getString("signedFileNotFoundException"));
+            }
+            return validateDetachedSignature(pkcs7, signedFile).getStatus();
         }
     }
 
-    private String validateAttachedSignature(InputStream attached) throws CertificateVerificationException {
-        String validationResult = "";
+    private VerifyingSignatureStatus validateAttachedSignature(InputStream attached) throws CertificateVerificationException, TimestampVerificationException {
+        VerifyingSignatureStatus status = new VerifyingSignatureStatus();
         Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
         try {
             CMSSignedData cmsSignedData = new CMSSignedData(attached);
             SignerInformationStore signers = cmsSignedData.getSignerInfos();
             Collection<SignerInformation> c = signers.getSigners();
-            boolean result = false;
-            for (SignerInformation signer : c) {
-                SignerId signerId = signer.getSID();
+            boolean result;
+            for (SignerInformation signerInformation : c) {
+                SignerId signerId = signerInformation.getSID();
                 Collection certCollection = cmsSignedData.getCertificates().getMatches(signerId);
 
                 Iterator certIt = certCollection.iterator();
                 X509Certificate cert = new JcaX509CertificateConverter().setProvider("BC").getCertificate((X509CertificateHolder) certIt.next());
-                result = signer.verify(new JcaSimpleSignerInfoVerifierBuilder().setProvider("BC").build(cert));
+                result = signerInformation.verify(new JcaSimpleSignerInfoVerifierBuilder().setProvider("BC").build(cert));
                 if (!result) {
-                    validationResult = "The signature is not valid!";
-                    return validationResult;
+                    status.includeStatus("status.signatureInvalid");
+                    return status;
                 }
                 CertificateVerifier.getInstance().validateCertificate(cert);
-                validationResult = validationResult.concat("Certificate validation passed. \nCertificate is valid.");
+                status.includeStatus(rb.getString("status.certificateValidationPassed"));
                 //TIMESTAMP PART
-                AttributeTable unsignedAttributes = signer.getUnsignedAttributes();
-                if (unsignedAttributes != null) {
-                    Attribute timestampAttribute = unsignedAttributes.get(PKCSObjectIdentifiers.id_aa_signatureTimeStampToken);
-                    if (timestampAttribute == null) {
-                        validationResult = validationResult.concat("\nThe signature contains no timestamp");
-                        log.log(Level.FINE, "The signature contains no timestamp.");
-                    } else {
-                        ASN1Encodable dob = timestampAttribute.getAttrValues().getObjectAt(0);
-                        CMSSignedData signedData = new CMSSignedData(dob.toASN1Primitive().getEncoded());
-                        TimeStampToken tst = new TimeStampToken(signedData);
-                        Collection tstSigners = tst.toCMSSignedData().getSignerInfos().getSigners();
-                        TimeStampTokenInfo timestampInfo = validateTimeStamp(tstSigners, tst);
-                        validationResult = validationResult.concat("\nThe signature contains a timestamp.");
-                        validationResult = validationResult.concat(String.format("\nTSA: %s\n Time: %s", timestampInfo.getTsa().toString(), timestampInfo.getGenTime().toString()));
-                    }
-                } else {
-                    validationResult = validationResult.concat("\nThe signature contains no timestamp.");
-                }
+                checkIfTimestampExists(signerInformation, status);
             }
-            return validationResult;
-        } catch (CertificateVerificationException ex) {
-            throw ex;
-        } catch (IOException | CertificateException | CMSException | OperatorCreationException | TSPException | StoreException ex) {
+            return status;
+        } catch (CertificateException | CMSException | OperatorCreationException | StoreException ex) {
             log.log(Level.SEVERE, "An error occured while validating the signature!", ex);
-            ResourceBundle r = ResourceBundle.getBundle("CoreBundle", locale);
-            throw new CertificateVerificationException(r.getString("signatureValidationFailedError"), ex);
+            throw new CertificateVerificationException(rb.getString("signatureValidationFailedError"), ex);
         }
     }
 
-    private String validateDetachedSignature(File pkcs7, File signedFile) throws SignatureValidationException {
-        String validationResult = "";
+    private VerifyingSignatureStatus validateDetachedSignature(File pkcs7, File signedFile) throws SignatureValidationException {
+        VerifyingSignatureStatus status = new VerifyingSignatureStatus();
         Security.addProvider(new BouncyCastleProvider());
         try {
             byte[] Sig_Bytes = new byte[(int) pkcs7.length()];
@@ -277,54 +293,78 @@ public class Pkcs7 extends Signer {
                 SignerInformationStore signers = cms.getSignerInfos();
                 Iterator it = signers.getSigners().iterator();
                 if (it.hasNext()) {
-                    SignerInformation signer = (SignerInformation) it.next();
-                    X509CertificateHolder cert = (X509CertificateHolder) certs.getMatches(signer.getSID()).iterator().next();
+                    SignerInformation signerInformation = (SignerInformation) it.next();
+                    X509CertificateHolder cert = (X509CertificateHolder) certs.getMatches(signerInformation.getSID()).iterator().next();
 
                     SignerInformationVerifier verifier = new BcRSASignerInfoVerifierBuilder(
                             new DefaultCMSSignatureAlgorithmNameGenerator(),
                             new DefaultSignatureAlgorithmIdentifierFinder(),
                             new DefaultDigestAlgorithmIdentifierFinder(),
                             new BcDigestCalculatorProvider()).build(cert);
-                    byte[] data = (byte[]) cms.getSignedContent().getContent();
-                    if (signer.verify(verifier)) {
-                        validationResult = "Signature verified sucessfully.";
+                    if (signerInformation.verify(verifier)) {
+                        status.includeStatus(rb.getString("status.signatureVerified"));
                     } else {
-                        validationResult = "Signature verification failed!";
-                        return validationResult;
+                        status.includeStatus(rb.getString("status.signatureInvalid"));
+                        return status;
                     }
-                    AttributeTable unsignedAttributes = signer.getUnsignedAttributes();
-                    if (unsignedAttributes != null) {
-                        Attribute timestampAttribute = unsignedAttributes.get(PKCSObjectIdentifiers.id_aa_signatureTimeStampToken);
-                        if (timestampAttribute == null) {
-                            validationResult = validationResult.concat("\nThe signature contains no timestamp");
-                            log.log(Level.FINE, "The signature contains no timestamp.");
-                        } else {
-                            ASN1Encodable dob = timestampAttribute.getAttrValues().getObjectAt(0);
-                            CMSSignedData signedData = new CMSSignedData(dob.toASN1Primitive().getEncoded());
-                            TimeStampToken tst = new TimeStampToken(signedData);
-                            Collection tstSigners = tst.toCMSSignedData().getSignerInfos().getSigners();
-                            TimeStampTokenInfo timestampInfo = validateTimeStamp(tstSigners, tst);
-                            validationResult = validationResult.concat("\nThe signature contains a timestamp.");
-                            validationResult = validationResult.concat(String.format("\nTSA: %s\n Time: %s", timestampInfo.getTsa().toString(), timestampInfo.getGenTime().toString()));
-                        }
-                    } else {
-                        validationResult = validationResult.concat("\nThe signature contains no timestamp.");
-                    }
+                    checkIfTimestampExists(signerInformation, status);
                 }
 
             } catch (Exception e) {
-                throw new SignatureValidationException("Could not validate signature!");
+                throw new SignatureValidationException(rb.getString("signatureValidationFailed"));
             }
-            return validationResult;
+            return status;
         } catch (IOException ex) {
-            throw new SignatureValidationException("Cannot read files!");
+            throw new SignatureValidationException(rb.getString("couldNotReadFilesError"));
         }
     }
 
     /**
-     * Validates timestamp
+     * Checks if the signerInformation contains any unsignedAttributes. If it
+     * does, then checks if the unsignedAttributes contain
+     * signatureTimeStampToken
+     *
+     * @param signerInformation - info to be checked.
+     * @param status - A string, carrying all data related to the signature
+     * validation and timestamp verification
+     * @throws TimestampVerificationException - If anything other than the
+     * verification failing happens this exception is thrown.
      */
-    private TimeStampTokenInfo validateTimeStamp(Collection timestampSigners, TimeStampToken tsToken) throws CertificateVerificationException {
+    private void checkIfTimestampExists(SignerInformation signerInformation, VerifyingSignatureStatus status) throws TimestampVerificationException {
+        AttributeTable unsignedAttributes = signerInformation.getUnsignedAttributes();
+        if (unsignedAttributes != null) {
+            Attribute timestampAttribute = unsignedAttributes.get(PKCSObjectIdentifiers.id_aa_signatureTimeStampToken);
+            if (timestampAttribute == null) {
+                status.includeStatus(rb.getString("status.noTimestamp"));
+                log.log(Level.FINE, "The signature contains no timestamp.");
+            } else {
+                try {
+                    ASN1Encodable dob = timestampAttribute.getAttrValues().getObjectAt(0);
+                    CMSSignedData signedData = new CMSSignedData(dob.toASN1Primitive().getEncoded());
+                    TimeStampToken tst = new TimeStampToken(signedData);
+                    Collection tstSigners = tst.toCMSSignedData().getSignerInfos().getSigners();
+                    TimeStampTokenInfo timestampInfo = validateTimeStamp(tstSigners, tst);
+                    status.includeStatus(rb.getString("status.hasTimestamp"));
+                    status.includeStatus(String.format("TSA: %s\n Time: %s", timestampInfo.getTsa().toString(), timestampInfo.getGenTime().toString()));
+                } catch (CMSException | TSPException | IOException ex) {
+                    log.log(Level.SEVERE, "The process of timestamp verification failed!", ex);
+                    throw new TimestampVerificationException(rb.getString("timestampValidationError"));
+                }
+            }
+        } else {
+            status.includeStatus(rb.getString("status.noTimestamp"));
+        }
+    }
+
+    /**
+     * Validates the timestamp
+     *
+     * @param timestampSigners
+     * @param tsToken
+     * @return
+     * @throws TimestampVerificationException
+     */
+    private TimeStampTokenInfo validateTimeStamp(Collection timestampSigners, TimeStampToken tsToken) throws TimestampVerificationException {
         try {
             Iterator tstIt = timestampSigners.iterator();
             while (tstIt.hasNext()) {
@@ -333,7 +373,7 @@ public class Pkcs7 extends Signer {
                 Iterator tstcertIt = tstCerts.getMatches(tstSignerInformation.getSID()).iterator();
                 X509CertificateHolder tstCert = (X509CertificateHolder) tstcertIt.next();
                 if (tstcertIt.hasNext()) {
-                    throw new Exception("Expected exactly one certificate for each signer in the timestamp.");
+                    throw new TimestampVerificationException(rb.getString("timestampingCertificateError"));
                 }
                 SignerInformationVerifier verifier = new BcRSASignerInfoVerifierBuilder(
                         new DefaultCMSSignatureAlgorithmNameGenerator(),
@@ -343,9 +383,50 @@ public class Pkcs7 extends Signer {
                 tsToken.validate(verifier);
             }
             return tsToken.getTimeStampInfo();
-        } catch (Exception ex) {
+        } catch (TimestampVerificationException ex) {
+            throw ex;
+        } catch (OperatorCreationException | TSPException | StoreException ex) {
             log.log(Level.SEVERE, "Error occured while validating timestamp!", ex);
-            throw new CertificateVerificationException("Could not validate timestamp..");
+            throw new TimestampVerificationException(rb.getString("signatureValidationFailedError"), ex);
         }
+    }
+
+    /**
+     * Checks whether the pkcs7 file contains encapsulated data.
+     *
+     * @param pkcs7 - input file.
+     * @return SignatureType.Attached if the pkcs7 file contains encapsulated
+     * data. SignatureType.Detached if the pkcs7 file does not contain
+     * encapsulated data.
+     */
+    private SignatureType checkFileType(File pkcs7) throws IOException {
+        byte[] Sig_Bytes = new byte[(int) pkcs7.length()];
+        try (DataInputStream in = new DataInputStream(new FileInputStream(pkcs7))) {
+            in.readFully(Sig_Bytes);
+            in.close();
+            CMSSignedData cmsSignedData = new CMSSignedData(Sig_Bytes);
+            Object signedData = cmsSignedData.getSignedContent();
+            if (signedData == null) {
+                return SignatureType.Detached;
+            } else {
+                return SignatureType.Attached;
+            }
+        } catch (IOException ex) {
+            log.log(Level.SEVERE, "An error occured while reading file!", ex);
+            throw new FileNotFoundException(rb.getString("pkcs7FileNotFoundException"));
+        } catch (CMSException ex) {
+            log.log(Level.SEVERE, "An error occured while constructing the pkcs7 object!", ex);
+            throw new FileNotFoundException(rb.getString("pkcs7FileNotFoundException"));
+        }
+    }
+
+    /**
+     * Loads the language resource bundle.
+     *
+     * @return Loaded bundle.
+     */
+    private static ResourceBundle loadBundle() {
+        ResourceBundle r = ResourceBundle.getBundle("CoreBundle", locale);
+        return r;
     }
 }
