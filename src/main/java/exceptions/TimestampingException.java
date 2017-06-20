@@ -23,6 +23,10 @@
  */
 package exceptions;
 
+import java.util.Locale;
+import java.util.ResourceBundle;
+import lombok.Getter;
+
 /**
  * Thrown when timestamping cannot be performed.
  *
@@ -30,13 +34,37 @@ package exceptions;
  */
 public class TimestampingException extends Exception {
 
+    public enum TimestampingError {
+        TIMESTAMPING_VALIDATION_ERROR("timestampValidationError");
+        @Getter
+        private String bundleKey;
+
+        private TimestampingError(String bundleKey) {
+            this.bundleKey = bundleKey;
+        }
+    }
     private static final long serialVersionUID = 1L;
 
-    public TimestampingException(String message, Throwable cause) {
-        super(message, cause);
+    private TimestampingError error;
+
+    public TimestampingException(TimestampingError error) {
+        this.error = error;
     }
 
-    public TimestampingException(String message) {
-        super(message);
+    public TimestampingException(TimestampingError error, Throwable cause) {
+        super(cause);
+        this.error = error;
+    }
+
+    @Override
+    public String getMessage() {
+        ResourceBundle rb = ResourceBundle.getBundle("CoreBundle", Locale.US);
+        return rb.getString(error.getBundleKey());
+    }
+
+    @Override
+    public String getLocalizedMessage() {
+        ResourceBundle rb = ResourceBundle.getBundle("CoreBundle");
+        return rb.getString(error.getBundleKey());
     }
 }
