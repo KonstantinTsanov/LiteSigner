@@ -12,7 +12,7 @@ package tools;
  */
 public class VerifyingSignatureStatus {
 
-    private String status;
+    private String status = "";
 
     /**
      * Includes additional information to the status string.
