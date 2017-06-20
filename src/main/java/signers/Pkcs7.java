@@ -29,6 +29,7 @@ import exceptions.SignatureValidationException;
 import exceptions.SigningException;
 import exceptions.TimestampVerificationException;
 import exceptions.TimestampingException;
+import exceptions.TimestampingException.TimestampingError;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -127,7 +128,7 @@ public class Pkcs7 extends Signer {
     }
 
     @Override
-    public void sign(boolean attached) throws AuthenticationException, SigningException {
+    public void sign(boolean attached) throws AuthenticationException, SigningException, TimestampingException {
         Objects.requireNonNull(_input);
         Objects.requireNonNull(_output);
         Objects.requireNonNull(_alias);
@@ -176,6 +177,8 @@ public class Pkcs7 extends Signer {
 //TODO
         } catch (AuthenticationException ex) {
             throw ex;
+        } catch (TimestampingException ex) {
+            throw ex;
         } catch (Exception ex) {
             log.log(Level.SEVERE, "Failed to sign!", ex);
             throw new SigningException(rb.getString("signingFiled"));
@@ -223,7 +226,7 @@ public class Pkcs7 extends Signer {
             }
             return response;
         } catch (Exception ex) {
-            throw new TimestampingException(rb.getString("timestampValidationError"), ex);
+            throw new TimestampingException(TimestampingError.TIMESTAMPING_VALIDATION_ERROR, ex);
         }
     }
 
@@ -248,38 +251,43 @@ public class Pkcs7 extends Signer {
         }
     }
 
-    private VerifyingSignatureStatus validateAttachedSignature(InputStream attached) throws CertificateVerificationException, TimestampVerificationException {
+    private VerifyingSignatureStatus validateAttachedSignature(InputStream attached) throws SignatureValidationException, TimestampVerificationException {
         VerifyingSignatureStatus status = new VerifyingSignatureStatus();
         Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
         try {
             CMSSignedData cmsSignedData = new CMSSignedData(attached);
-            SignerInformationStore signers = cmsSignedData.getSignerInfos();
-            Collection<SignerInformation> c = signers.getSigners();
-            boolean result;
-            for (SignerInformation signerInformation : c) {
+
+            SignerInformationStore signerInfos = cmsSignedData.getSignerInfos();
+            Collection<SignerInformation> signedInfoCollection = signerInfos.getSigners();
+            for (SignerInformation signerInformation : signedInfoCollection) {
                 SignerId signerId = signerInformation.getSID();
                 Collection certCollection = cmsSignedData.getCertificates().getMatches(signerId);
-
                 Iterator certIt = certCollection.iterator();
                 X509Certificate cert = new JcaX509CertificateConverter().setProvider("BC").getCertificate((X509CertificateHolder) certIt.next());
-                result = signerInformation.verify(new JcaSimpleSignerInfoVerifierBuilder().setProvider("BC").build(cert));
-                if (!result) {
+                if (signerInformation.verify(new JcaSimpleSignerInfoVerifierBuilder().setProvider("BC").build(cert))) {
+                    status.includeStatus(rb.getString("status.signatureVerified"));
+                } else {
                     status.includeStatus("status.signatureInvalid");
                     return status;
                 }
-                CertificateVerifier.getInstance().validateCertificate(cert);
-                status.includeStatus(rb.getString("status.certificateValidationPassed"));
+                try {
+                    CertificateVerifier.getInstance().validateCertificate(cert, status);
+                    status.includeStatus(rb.getString("status.certificateValidationPassed"));
+                } catch (CertificateVerificationException ex) {
+                    status.includeStatus(rb.getString("status.signatureVerificationFailed"));
+                    return status;
+                }
                 //TIMESTAMP PART
                 checkIfTimestampExists(signerInformation, status);
             }
             return status;
         } catch (CertificateException | CMSException | OperatorCreationException | StoreException ex) {
             log.log(Level.SEVERE, "An error occured while validating the signature!", ex);
-            throw new CertificateVerificationException(rb.getString("signatureValidationFailedError"), ex);
+            throw new SignatureValidationException(rb.getString("signatureValidationFailedError"), ex);
         }
     }
 
-    private VerifyingSignatureStatus validateDetachedSignature(File pkcs7, File signedFile) throws SignatureValidationException {
+    private VerifyingSignatureStatus validateDetachedSignature(File pkcs7, File signedFile) throws SignatureValidationException, TimestampVerificationException {
         VerifyingSignatureStatus status = new VerifyingSignatureStatus();
         Security.addProvider(new BouncyCastleProvider());
         try {
@@ -294,29 +302,46 @@ public class Pkcs7 extends Signer {
                 input.close();
             }
             try {
-                CMSSignedData cms = new CMSSignedData(new CMSProcessableByteArray(Data_Bytes), Sig_Bytes);
-                Store certs = cms.getCertificates();
-                SignerInformationStore signers = cms.getSignerInfos();
-                Iterator it = signers.getSigners().iterator();
-                if (it.hasNext()) {
-                    SignerInformation signerInformation = (SignerInformation) it.next();
-                    X509CertificateHolder cert = (X509CertificateHolder) certs.getMatches(signerInformation.getSID()).iterator().next();
+                CMSSignedData cmsSignedData = new CMSSignedData(new CMSProcessableByteArray(Data_Bytes), Sig_Bytes);
 
+                SignerInformationStore signerInfos = cmsSignedData.getSignerInfos();
+                Collection<SignerInformation> signedInfoCollection = signerInfos.getSigners();
+                for (SignerInformation signerInformation : signedInfoCollection) {
+                    SignerId signerId = signerInformation.getSID();
+                    Collection certCollection = cmsSignedData.getCertificates().getMatches(signerId);
+                    //---------------------------Certificate extraction for verification------------------------------------
+                    Iterator certIt = certCollection.iterator();
+                    X509Certificate cert = new JcaX509CertificateConverter().setProvider("BC").getCertificate((X509CertificateHolder) certIt.next());
+                    //------------------------------------------------------------------------------------------------------
+                    X509CertificateHolder certHolder = (X509CertificateHolder) certCollection.iterator().next();
                     SignerInformationVerifier verifier = new BcRSASignerInfoVerifierBuilder(
                             new DefaultCMSSignatureAlgorithmNameGenerator(),
                             new DefaultSignatureAlgorithmIdentifierFinder(),
                             new DefaultDigestAlgorithmIdentifierFinder(),
-                            new BcDigestCalculatorProvider()).build(cert);
-                    if (signerInformation.verify(verifier)) {
-                        status.includeStatus(rb.getString("status.signatureVerified"));
-                    } else {
+                            new BcDigestCalculatorProvider()).build(certHolder);
+                    try {
+                        if (signerInformation.verify(verifier)) {
+                            status.includeStatus(rb.getString("status.signatureVerified"));
+                        } else {
+                            status.includeStatus(rb.getString("status.signatureInvalid"));
+                            return status;
+                        }
+                    } catch (CMSException ex) {
                         status.includeStatus(rb.getString("status.signatureInvalid"));
                         return status;
                     }
+
+                    try {
+                        CertificateVerifier.getInstance().validateCertificate(cert, status);
+                        status.includeStatus(rb.getString("status.certificateValidationPassed"));
+                    } catch (CertificateVerificationException ex) {
+                        status.includeStatus(rb.getString("status.signatureVerificationFailed"));
+                        return status;
+                    }
+                    //TIMESTAMP PART
                     checkIfTimestampExists(signerInformation, status);
                 }
-
-            } catch (Exception e) {
+            } catch (CertificateException | CMSException | OperatorCreationException | StoreException e) {
                 throw new SignatureValidationException(rb.getString("signatureValidationFailed"));
             }
             return status;

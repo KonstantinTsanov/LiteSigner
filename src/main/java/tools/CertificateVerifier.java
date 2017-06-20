@@ -41,7 +41,6 @@ import java.security.cert.TrustAnchor;
 import java.security.cert.X509CertSelector;
 import java.security.cert.X509Certificate;
 import java.util.HashSet;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.ResourceBundle;
 import java.util.Set;
@@ -61,13 +60,14 @@ public class CertificateVerifier {
     /**
      *
      * @param certificate
+     * @param status
      * @return
      * @throws CertificateVerificationException
      *
      * @author Konstantin Tsanov <k.tsanov@gmail.com>
      * @author Svetlin Nakov
      */
-    public PKIXCertPathBuilderResult validateCertificate(X509Certificate certificate) throws
+    public PKIXCertPathBuilderResult validateCertificate(X509Certificate certificate, VerifyingSignatureStatus status) throws
             CertificateVerificationException {
         ResourceBundle rb = ResourceBundle.getBundle("CoreBundle");
         try {
@@ -97,15 +97,19 @@ public class CertificateVerifier {
             // The chain is built and verified. Return it as a result
             return verifiedCertChain;
         } catch (CertPathBuilderException certPathEx) {
+            status.includeStatus(rb.getString("certificateVerifier.errorBuildingCertificationPath") + certificate.getSubjectX500Principal());
             throw new CertificateVerificationException(
                     rb.getString("certificateVerifier.errorBuildingCertificationPath") + certificate.getSubjectX500Principal(), certPathEx);
         } catch (CertificateVerificationException cvex) {
+            status.includeStatus(cvex.getLocalizedMessage());
             throw cvex;
         } catch (NoSuchAlgorithmException | NoSuchProviderException | CertificateException ex) {
+            status.includeStatus(rb.getString("certificateVerifier.errorCheckingSelfSigned") + certificate.getSubjectX500Principal());
             throw new CertificateVerificationException(
                     rb.getString("certificateVerifier.errorCheckingSelfSigned") + certificate.getSubjectX500Principal(), ex
             );
         } catch (GeneralSecurityException ex) {
+            rb.getString(rb.getString("certificateVerifier.errorVerifyingCertificate") + certificate.getSubjectX500Principal());
             throw new CertificateVerificationException(
                     rb.getString("certificateVerifier.errorVerifyingCertificate") + certificate.getSubjectX500Principal(), ex);
         }

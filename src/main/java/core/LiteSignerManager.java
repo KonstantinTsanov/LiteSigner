@@ -74,10 +74,12 @@ import enums.SignatureType;
 import exceptions.SignatureValidationException;
 import exceptions.SigningException;
 import exceptions.TimestampVerificationException;
+import exceptions.TimestampingException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.logging.Logger;
 import signers.Pkcs7;
+import tools.VerifyingSignatureStatus;
 
 /**
  * Manages all threads except the EDT within the application. Takes care of all
@@ -175,27 +177,27 @@ public class LiteSignerManager {
                             log.log(Level.FINE, "Failed to login!Incorrect pin code!", ex);
                             SwingUtilities.invokeLater(() -> {
                                 JOptionPane.showMessageDialog(devicePanel.getPanelParent(), rb.getString("LiteSignerManager.incorrectPin"),
-                                        rb.getString("LiteSignerManager.dialogMessage"), JOptionPane.WARNING_MESSAGE);
+                                        rb.getString("messageTitle"), JOptionPane.WARNING_MESSAGE);
                             });
                         } else if (ex.getCause() instanceof LoginException && "CKR_PIN_LOCKED".equals(ExceptionUtils.getRootCause(ex).getLocalizedMessage())) {
                             log.log(Level.FINEST, "Failed to login >3 times! Locked pin!", ex);
                             SwingUtilities.invokeLater(() -> {
                                 JOptionPane.showMessageDialog(devicePanel.getPanelParent(), rb.getString("LiteSignerManager.pinLocked"),
-                                        rb.getString("LiteSignerManager.dialogMessage"), JOptionPane.WARNING_MESSAGE);
+                                        rb.getString("messageTitle"), JOptionPane.WARNING_MESSAGE);
                             });
                         } else {
                             SwingUtilities.invokeLater(() -> {
 
                                 log.log(Level.SEVERE, "Problem with the keystore /usb token!/ data!", ex);
                                 JOptionPane.showMessageDialog(devicePanel.getPanelParent(), rb.getString("LiteSignerManager.generalProblem"),
-                                        rb.getString("LiteSignerManager.dialogMessage"), JOptionPane.WARNING_MESSAGE);
+                                        rb.getString("messageTitle"), JOptionPane.WARNING_MESSAGE);
                             });
                         }
                     } catch (NoSuchAlgorithmException | CertificateException | KeyStoreException ex) {
                         SwingUtilities.invokeLater(() -> {
                             log.log(Level.SEVERE, "Problem with the keystore /usb token!/ data!", ex);
                             JOptionPane.showMessageDialog(devicePanel.getPanelParent(), rb.getString("LiteSignerManager.generalProblem"),
-                                    rb.getString("LiteSignerManager.dialogMessage"), JOptionPane.WARNING_MESSAGE);
+                                    rb.getString("messageTitle"), JOptionPane.WARNING_MESSAGE);
                         });
                     }
 
@@ -286,6 +288,9 @@ public class LiteSignerManager {
                         } catch (SigningException ex) {
                             //
                             Logger.getLogger(LiteSignerManager.class.getName()).log(Level.SEVERE, null, ex);
+                        } catch (TimestampingException ex) {
+                            JOptionPane.showMessageDialog(devicePanel.getPanelParent(), ex.getLocalizedMessage(),
+                                    rb.getString("messageTitle"), JOptionPane.ERROR_MESSAGE);
                         }
                     } else if (type == SignatureType.Pdf) {
 //todo implementation with iText
@@ -295,14 +300,14 @@ public class LiteSignerManager {
                     log.log(Level.SEVERE, "Input file /{0}/ doesn't exist or cannot be read from!", input);
                     SwingUtilities.invokeLater(() -> {
                         JOptionPane.showMessageDialog(devicePanel.getPanelParent(), rb.getString("LiteSignerManager.inputFileUnavailable"),
-                                rb.getString("LiteSignerManager.dialogMessage"), JOptionPane.ERROR_MESSAGE);
+                                rb.getString("messageTitle"), JOptionPane.ERROR_MESSAGE);
                     });
                 }
             } else {
                 log.log(Level.SEVERE, "Smartcard {0} locked", smartcard.getSlotDescription());
                 SwingUtilities.invokeLater(() -> {
                     JOptionPane.showMessageDialog(devicePanel.getPanelParent(), rb.getString("LiteSignerManager.smartcardLocked"),
-                            rb.getString("LiteSignerManager.dialogMessage"), JOptionPane.ERROR_MESSAGE);
+                            rb.getString("messageTitle"), JOptionPane.ERROR_MESSAGE);
                 });
             }
         });
@@ -341,7 +346,8 @@ public class LiteSignerManager {
             X509Certificate certificate = getSelectedCertificateFromTable(row);
             if (certificate != null) {
                 try {
-                    PKIXCertPathBuilderResult result = CertificateVerifier.getInstance().validateCertificate(certificate);
+                    //FAKE STATUS VerifyingSignatureStatus
+                    PKIXCertPathBuilderResult result = CertificateVerifier.getInstance().validateCertificate(certificate, new VerifyingSignatureStatus());
                     if (result == null) {
                         throw new CertificateVerificationException(rb.getString("LiteSignerManager.certificateIsInvalidError"));
                     }
