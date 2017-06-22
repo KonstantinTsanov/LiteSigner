@@ -285,10 +285,7 @@ public class LiteSignerManager {
                             log.log(Level.SEVERE, null, ex);
                         } catch (AuthenticationException ex) {
 //PIN window closed. Dont care.
-                        } catch (SigningException ex) {
-                            //
-                            Logger.getLogger(LiteSignerManager.class.getName()).log(Level.SEVERE, null, ex);
-                        } catch (TimestampingException ex) {
+                        } catch (SigningException | TimestampingException ex) {
                             JOptionPane.showMessageDialog(devicePanel.getPanelParent(), ex.getLocalizedMessage(),
                                     rb.getString("messageTitle"), JOptionPane.ERROR_MESSAGE);
                         }
