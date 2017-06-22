@@ -53,7 +53,7 @@ public class DeviceManager {
     private final Properties driversList = new Properties();
     private final String key = "Paths";
     private Preferences driverPaths;
-    private static final DeviceManager singleton = new DeviceManager();
+    private static final DeviceManager SINGLETON = new DeviceManager();
 
     //Keeps track of the number of attached USB devices. Updated after each  countAttachedUSBDevices() call.
     private int attachedUSBCount = Integer.MIN_VALUE;
@@ -61,6 +61,9 @@ public class DeviceManager {
     //The first string represents the slot description. The entry contains an integer which represents the slotIndex and a File which is the Path to driver.
     Map<String, Entry<Integer, File>> deviceMap = new HashMap<>();
 
+    /**
+     * Static block initializing libusb
+     */
     static {
         int result = LibUsb.init(null);
         if (result < 0) {
@@ -68,10 +71,18 @@ public class DeviceManager {
         }
     }
 
+    /**
+     *
+     *
+     * @return The singleton instance.
+     */
     public static DeviceManager getInstance() {
-        return singleton;
+        return SINGLETON;
     }
 
+    /**
+     * Initializes the lists before use
+     */
     private void initDriverListAndPaths() {
         driverPaths = Preferences.userNodeForPackage(DeviceManager.class);
         try {
@@ -93,7 +104,8 @@ public class DeviceManager {
      * been detected or null otherwise.
      * @throws PKCS11Exception
      */
-    public synchronized Map<String, Entry<Integer, File>> scanForUSBDevices() throws PKCS11Exception {
+    public synchronized Map<String, Entry<Integer, File>> scanForUSBDevices() throws 
+            PKCS11Exception {
         int newUSBCount = countAttachedUSBDevices();
         if (newUSBCount > attachedUSBCount) {
             attachedUSBCount = newUSBCount;
@@ -114,7 +126,8 @@ public class DeviceManager {
      * @return List of attached devices
      * @throws PKCS11Exception
      */
-    private Map<String, Entry<Integer, File>> scanAllDirectories() throws PKCS11Exception {
+    private Map<String, Entry<Integer, File>> scanAllDirectories() throws 
+            PKCS11Exception {
         initDriverListAndPaths();
         String[] paths = driverPaths.get(key, null).split(";", -1);
         String driver;
@@ -146,7 +159,8 @@ public class DeviceManager {
      *
      * @return Map containing the updated list of devices.
      */
-    private Map<String, Entry<Integer, File>> checkDeviceStatus() throws PKCS11Exception {
+    private Map<String, Entry<Integer, File>> checkDeviceStatus() throws 
+            PKCS11Exception {
         PKCS11 p11 = null;
         Entry<String, Entry<Integer, File>> device = null;
         Map<String, Entry<Integer, File>> newDeviceMap = new HashMap<>();
@@ -185,7 +199,14 @@ public class DeviceManager {
         return newUsbCount;
     }
 
-    public void AddNewPathToDriver(String path) throws IllegalArgumentException {
+    /**
+     * Adds a new path to the string ot paths to be searched for drivers.
+     *
+     * @param path to be added
+     * @throws IllegalArgumentException
+     */
+    public void AddNewPathToDriver(String path) throws 
+            IllegalArgumentException {
         Objects.requireNonNull(path, "path must not be null");
 
         String currentPaths = driverPaths.get(key, null);
@@ -199,6 +220,10 @@ public class DeviceManager {
         driverPaths.put(key, newPaths);
     }
 
+    /**
+     *
+     * @return All paths to be searched for drivers.
+     */
     public String[] GetAllDriverPaths() {
         return driverPaths.get(key, null).split(";", -1);
     }
