@@ -76,6 +76,9 @@ public class Pkcs11 extends Pkcs1_ {
         registerProvider();
     }
 
+    /**
+     * Registers the configured provider
+     */
     private void registerProvider() {
         String pkcs11Config = String.format("name=%s\nlibrary=%s\nslotListIndex=%d", "SmartCard" + pluggedCount++, _driver, _slotId);
         ByteArrayInputStream configStream = new ByteArrayInputStream(pkcs11Config.getBytes());
@@ -83,6 +86,9 @@ public class Pkcs11 extends Pkcs1_ {
         Security.addProvider(_provider);
     }
 
+    /**
+     * Logs out of the provider, removes and clears it
+     */
     public void closeSession() {
         try {
             ((SunPKCS11) _provider).logout();
@@ -95,8 +101,19 @@ public class Pkcs11 extends Pkcs1_ {
         pluggedCount--;
     }
 
+    /**
+     * Used to log into the keystore
+     *
+     * @throws KeyStoreException
+     * @throws IOException
+     * @throws NoSuchAlgorithmException
+     * @throws CertificateException
+     * @throws AuthenticationException
+     */
     @Override
-    public final void login() throws KeyStoreException, IOException, NoSuchAlgorithmException, CertificateException, AuthenticationException {
+    public final void login() throws KeyStoreException, IOException, 
+            NoSuchAlgorithmException, CertificateException,
+            AuthenticationException {
         char[] pin = _passwordCallback.getPin();
         if (pin != null) {
             _certKeyStore = KeyStore.getInstance("PKCS11", _provider);
@@ -106,19 +123,34 @@ public class Pkcs11 extends Pkcs1_ {
         }
     }
 
+    /**
+     *
+     *
+     * @return - The slot description.
+     */
     public String getSlotDescription() {
         return slotDescription;
     }
 
-    public X509Certificate[] getCertificateChain(String alias) throws KeyStoreException {
-        return (X509Certificate[]) _certKeyStore.getCertificateChain(alias);
-    }
-
-    public String getCertificateAlias(Certificate cert) throws KeyStoreException {
+    /**
+     *
+     * @param cert Certificate whose alias must be returned
+     * @return Certificate alias within the keystore
+     * @throws KeyStoreException
+     */
+    public String getCertificateAlias(Certificate cert) throws 
+            KeyStoreException {
         return _certKeyStore.getCertificateAlias(cert);
     }
 
-    public List<X509Certificate> listCertificates() throws KeyStoreException {
+    /**
+     *
+     *
+     * @return The certificates available in the keystore
+     * @throws KeyStoreException
+     */
+    public List<X509Certificate> listCertificates() throws 
+            KeyStoreException {
         List<X509Certificate> list = new ArrayList<>();
         java.util.Enumeration aliases = _certKeyStore.aliases();
         while (aliases.hasMoreElements()) {
@@ -132,11 +164,11 @@ public class Pkcs11 extends Pkcs1_ {
     @Override
     public List<String> listAliases() throws KeyStoreException {
         return Collections.list(_certKeyStore.aliases());
-
     }
 
     @Override
-    public X509Certificate getCertificate(String alias) throws KeyStoreException {
+    public X509Certificate getCertificate(String alias) throws 
+            KeyStoreException {
         return (X509Certificate) _certKeyStore.getCertificate(alias);
     }
 }

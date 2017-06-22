@@ -58,7 +58,10 @@ public abstract class Pkcs1_ {
 
     public abstract List<String> listAliases() throws KeyStoreException;
 
-    public abstract X509Certificate getCertificate(String alias) throws KeyStoreException;
+    public abstract X509Certificate getCertificate(String alias) throws 
+            KeyStoreException;
 
-    public abstract void login() throws KeyStoreException, IOException, NoSuchAlgorithmException, CertificateException, AuthenticationException;
+    public abstract void login() throws KeyStoreException, 
+            IOException, NoSuchAlgorithmException, 
+            CertificateException, AuthenticationException;
 }

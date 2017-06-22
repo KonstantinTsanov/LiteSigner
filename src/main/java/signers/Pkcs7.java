@@ -115,10 +115,22 @@ public class Pkcs7 extends Signer {
     private URL _timestampAddress;
     private static ResourceBundle rb = loadBundle();
 
+    /**
+     * Constructor, when the object is going to be used for verifying.
+     */
     public Pkcs7() {
 
     }
 
+    /**
+     * Constructor, when the object is going to be used for signing.
+     *
+     * @param pkcs1x
+     * @param alias
+     * @param input
+     * @param output
+     * @param timestampAddress
+     */
     public Pkcs7(Pkcs1_ pkcs1x, String alias, File input, File output, URL timestampAddress) {
         _pkcs1x = pkcs1x;
         _alias = alias;
@@ -127,8 +139,18 @@ public class Pkcs7 extends Signer {
         _timestampAddress = timestampAddress;
     }
 
+    /**
+     * Signing method.
+     *
+     * @param attached Indicates whether the output should contain the signed
+     * file or not.
+     * @throws AuthenticationException
+     * @throws SigningException
+     * @throws TimestampingException
+     */
     @Override
-    public void sign(boolean attached) throws AuthenticationException, SigningException, TimestampingException {
+    public void sign(boolean attached) throws AuthenticationException,
+            SigningException, TimestampingException {
         Objects.requireNonNull(_input);
         Objects.requireNonNull(_output);
         Objects.requireNonNull(_alias);
@@ -230,6 +252,18 @@ public class Pkcs7 extends Signer {
         }
     }
 
+    /**
+     * Validates a signature
+     *
+     * @param pkcs7 Pkcs7 file /containing signature and optional signed data/.
+     * @param signedFile Contains the signed data.
+     * @return String containing the result of the validation
+     * @throws FileNotFoundException
+     * @throws SignatureValidationException
+     * @throws TimestampVerificationException
+     * @throws CertificateVerificationException
+     * @throws IOException
+     */
     @Override
     public String validate(File pkcs7, File signedFile) throws FileNotFoundException,
             SignatureValidationException,
@@ -251,7 +285,16 @@ public class Pkcs7 extends Signer {
         }
     }
 
-    private VerifyingSignatureStatus validateAttachedSignature(InputStream attached) throws SignatureValidationException, TimestampVerificationException {
+    /**
+     * Validates attached signature
+     *
+     * @param attached Stream to the file.
+     * @return Object containing the result of the validation
+     * @throws SignatureValidationException
+     * @throws TimestampVerificationException
+     */
+    private VerifyingSignatureStatus validateAttachedSignature(InputStream attached) throws
+            SignatureValidationException, TimestampVerificationException {
         VerifyingSignatureStatus status = new VerifyingSignatureStatus();
         Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
         try {
@@ -287,7 +330,18 @@ public class Pkcs7 extends Signer {
         }
     }
 
-    private VerifyingSignatureStatus validateDetachedSignature(File pkcs7, File signedFile) throws SignatureValidationException, TimestampVerificationException {
+    /**
+     * Validates detached signature
+     *
+     * @param pkcs7 File containing the signature only
+     * @param signedFile File containg the data that the signature must be
+     * verified against.
+     * @return String containing the result of the validation
+     * @throws SignatureValidationException
+     * @throws TimestampVerificationException
+     */
+    private VerifyingSignatureStatus validateDetachedSignature(File pkcs7, File signedFile) throws
+            SignatureValidationException, TimestampVerificationException {
         VerifyingSignatureStatus status = new VerifyingSignatureStatus();
         Security.addProvider(new BouncyCastleProvider());
         try {
@@ -361,7 +415,8 @@ public class Pkcs7 extends Signer {
      * @throws TimestampVerificationException - If anything other than the
      * verification failing happens this exception is thrown.
      */
-    private void checkIfTimestampExists(SignerInformation signerInformation, VerifyingSignatureStatus status) throws TimestampVerificationException {
+    private void checkIfTimestampExists(SignerInformation signerInformation, VerifyingSignatureStatus status) throws
+            TimestampVerificationException {
         AttributeTable unsignedAttributes = signerInformation.getUnsignedAttributes();
         if (unsignedAttributes != null) {
             Attribute timestampAttribute = unsignedAttributes.get(PKCSObjectIdentifiers.id_aa_signatureTimeStampToken);
@@ -395,7 +450,8 @@ public class Pkcs7 extends Signer {
      * @return
      * @throws TimestampVerificationException
      */
-    private TimeStampTokenInfo validateTimeStamp(Collection timestampSigners, TimeStampToken tsToken) throws TimestampVerificationException {
+    private TimeStampTokenInfo validateTimeStamp(Collection timestampSigners, TimeStampToken tsToken) throws
+            TimestampVerificationException {
         try {
             Iterator tstIt = timestampSigners.iterator();
             while (tstIt.hasNext()) {
