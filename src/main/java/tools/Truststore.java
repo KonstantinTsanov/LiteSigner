@@ -37,13 +37,21 @@ import java.util.List;
  */
 public class Truststore {
 
-    private static Truststore singleton = new Truststore();
+    private static Truststore SINGLETON = new Truststore();
 
     public static Truststore getInstance() {
-        return singleton;
+        return SINGLETON;
     }
 
-    public List<X509Certificate> ReadContent() throws CertificateVerificationException {
+    /**
+     * Reads the certificates from the keystore and returns a list containing
+     * all of them.
+     *
+     * @return List of certificates contained in the store.
+     * @throws CertificateVerificationException
+     */
+    public List<X509Certificate> ReadContent() throws
+            CertificateVerificationException {
         try (InputStream is = getClass().getResourceAsStream("/keystore/Keystore.jks")) {
             KeyStore keystore = KeyStore.getInstance(KeyStore.getDefaultType());
             String password = "secured";
@@ -57,7 +65,8 @@ public class Truststore {
             }
             return certs;
         } catch (Exception ex) {
-            throw new CertificateVerificationException("Cannot get the trusted certificates from keystore!", ex);
+            throw new CertificateVerificationException(
+                    "Cannot get the trusted certificates from keystore!", ex);
         }
     }
 }

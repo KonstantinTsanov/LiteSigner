@@ -41,12 +41,23 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
+ * Creates a keystore and adds all selected certificates to it
  *
  * @author Konstantin Tsanov <k.tsanov@gmail.com>
  */
 public class TrustStoreImporter {
 
-    public static void createStore() throws KeyStoreException, IOException, NoSuchAlgorithmException, CertificateException {
+    /**
+     * Creates a keystore with pin
+     *
+     * @throws KeyStoreException
+     * @throws IOException
+     * @throws NoSuchAlgorithmException
+     * @throws CertificateException
+     */
+    public static void createStore() throws KeyStoreException, IOException,
+            NoSuchAlgorithmException,
+            CertificateException {
         KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
         char[] password = "secured".toCharArray();
         ks.load(null, password);
@@ -56,7 +67,17 @@ public class TrustStoreImporter {
         }
     }
 
-    public static void importToStore() throws FileNotFoundException, IOException, NoSuchAlgorithmException, KeyStoreException, CertificateException {
+    /**
+     * Imports the selected certificates into the keystore
+     *
+     * @throws FileNotFoundException
+     * @throws IOException
+     * @throws NoSuchAlgorithmException
+     * @throws KeyStoreException
+     * @throws CertificateException
+     */
+    public static void importToStore() throws FileNotFoundException, IOException,
+            NoSuchAlgorithmException, KeyStoreException, CertificateException {
         String certfile = "src/main/resources/keystore/1.cer";
         String certfile1 = "src/main/resources/keystore/2.cer";
         FileInputStream is = new FileInputStream("src/main/resources/keystore/Keystore.jks");
@@ -92,6 +113,14 @@ public class TrustStoreImporter {
 
     }
 
+    /**
+     * Reads a file, stores it into byte array and then returns the byte array
+     * as stream
+     *
+     * @param fname File to be opened
+     * @return file as byte array input stream
+     * @throws IOException
+     */
     private static InputStream fullStream(String fname) throws IOException {
         FileInputStream fis = new FileInputStream(fname);
         DataInputStream dis = new DataInputStream(fis);
@@ -101,44 +130,10 @@ public class TrustStoreImporter {
         return bais;
     }
 
-    private static void ReadContent() {
-        InputStream is = null;
-        try {
-
-            File file = new File("src/main/resources/keystore/Keystore.jks");
-            is = new FileInputStream(file);
-            KeyStore keystore = KeyStore.getInstance(KeyStore.getDefaultType());
-            String password = "secured";
-            keystore.load(is, password.toCharArray());
-            //TODO
-
-        } catch (java.security.cert.CertificateException e) {
-            e.printStackTrace();
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (KeyStoreException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            if (null != is) {
-                try {
-                    is.close();
-                } catch (IOException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
-                }
-            }
-        }
-    }
-
     public static void main(String args[]) {
         try {
             createStore();
             importToStore();
-            ReadContent();
         } catch (KeyStoreException ex) {
             Logger.getLogger(TrustStoreImporter.class.getName()).log(Level.SEVERE, null, ex);
         } catch (IOException ex) {
