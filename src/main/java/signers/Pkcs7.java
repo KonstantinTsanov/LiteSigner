@@ -50,7 +50,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.ResourceBundle;
 import java.util.logging.Level;
@@ -197,9 +196,7 @@ public class Pkcs7 extends Signer {
                 fileOuputStream.flush();
             }
 //TODO
-        } catch (AuthenticationException ex) {
-            throw ex;
-        } catch (TimestampingException ex) {
+        } catch (AuthenticationException | TimestampingException ex) {
             throw ex;
         } catch (Exception ex) {
             log.log(Level.SEVERE, "Failed to sign!", ex);
@@ -233,8 +230,6 @@ public class Pkcs7 extends Signer {
             try (OutputStream out = conn.getOutputStream()) {
                 out.write(request);
                 out.flush();
-            } catch (Exception ex) {
-                throw new RuntimeException(ex);
             }
             if (conn.getResponseCode() >= 400) {
                 throw new IOException(rb.getString("timestampingHttpError") + conn.getResponseCode() + " - " + conn.getResponseMessage());
@@ -247,7 +242,7 @@ public class Pkcs7 extends Signer {
                 throw new IOException(rb.getString("timestampingBadResponseError") + response.getStatusString() + ")");
             }
             return response;
-        } catch (Exception ex) {
+        } catch (IOException | TSPException ex) {
             throw new TimestampingException(TimestampingError.TIMESTAMPING_VALIDATION_ERROR, ex);
         }
     }
@@ -314,7 +309,7 @@ public class Pkcs7 extends Signer {
                     return status;
                 }
                 try {
-                    CertificateVerifier.getInstance().validateCertificate(cert, status);
+                    CertificateVerifier.getInstance().verifyCertificate(cert, status);
                     status.includeStatus(rb.getString("status.certificateValidationPassed"));
                 } catch (CertificateVerificationException ex) {
                     status.includeStatus(rb.getString("status.signatureVerificationFailed"));
@@ -386,7 +381,7 @@ public class Pkcs7 extends Signer {
                     }
 
                     try {
-                        CertificateVerifier.getInstance().validateCertificate(cert, status);
+                        CertificateVerifier.getInstance().verifyCertificate(cert, status);
                         status.includeStatus(rb.getString("status.certificateValidationPassed"));
                     } catch (CertificateVerificationException ex) {
                         status.includeStatus(rb.getString("status.signatureVerificationFailed"));
