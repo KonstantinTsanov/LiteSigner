@@ -77,7 +77,6 @@ import exceptions.TimestampVerificationException;
 import exceptions.TimestampingException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.logging.Logger;
 import signers.Pkcs7;
 import tools.VerifyingSignatureStatus;
 
@@ -122,22 +121,36 @@ public class LiteSignerManager {
      * interface.
      * @param certificatePanel
      * @param passwordCallback
+     * @param signatureVerificationPanel
      */
-    public void setComponents(DevicePanel devicePanel, CertificatePanel certificatePanel, PasswordCallback passwordCallback, SignatureVerificationPanel signatureVerificationPanel) {
+    public void setComponents(DevicePanel devicePanel, CertificatePanel certificatePanel,
+            PasswordCallback passwordCallback, SignatureVerificationPanel signatureVerificationPanel) {
         this.devicePanel = devicePanel;
         this.certificatePanel = certificatePanel;
         this.passwordCallback = passwordCallback;
         this.signatureVerificationPanel = signatureVerificationPanel;
     }
 
+    /**
+     * Private constructor. Cannot be instantiated.
+     */
     private LiteSignerManager() {
 
     }
 
+    /**
+     *
+     * @return Singleton instance
+     */
     public static LiteSignerManager getInstance() {
         return SINGLETON;
     }
 
+    /**
+     * Authorization point.
+     *
+     * @param slotDescription
+     */
     public void deviceLogIn(String slotDescription) {
         Objects.requireNonNull(slotDescription);
         if (!isLoginThreadBusy) {
@@ -344,7 +357,7 @@ public class LiteSignerManager {
             if (certificate != null) {
                 try {
                     //FAKE STATUS VerifyingSignatureStatus
-                    PKIXCertPathBuilderResult result = CertificateVerifier.getInstance().validateCertificate(certificate, new VerifyingSignatureStatus());
+                    PKIXCertPathBuilderResult result = CertificateVerifier.getInstance().verifyCertificate(certificate, new VerifyingSignatureStatus());
                     if (result == null) {
                         throw new CertificateVerificationException(rb.getString("LiteSignerManager.certificateIsInvalidError"));
                     }
@@ -431,6 +444,9 @@ public class LiteSignerManager {
         }
     }
 
+    /**
+     * Clears the certificate list on the GUI.
+     */
     public void clearCertificateList() {
         certificatePanel.getTableModel().setRowCount(0);
     }
