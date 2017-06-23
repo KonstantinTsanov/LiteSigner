@@ -46,6 +46,8 @@ import java.util.ResourceBundle;
 import java.util.Set;
 
 /**
+ * Verifies a certificate by building a certificate chain and verifying the
+ * certificate against CRL
  *
  * @author Konstantin Tsanov <k.tsanov@gmail.com>
  */
@@ -58,6 +60,7 @@ public class CertificateVerifier {
     }
 
     /**
+     * Performs certificate validation.
      *
      * @param certificate
      * @param status
@@ -67,8 +70,9 @@ public class CertificateVerifier {
      * @author Konstantin Tsanov <k.tsanov@gmail.com>
      * @author Svetlin Nakov
      */
-    public PKIXCertPathBuilderResult validateCertificate(X509Certificate certificate, VerifyingSignatureStatus status) throws
-            CertificateVerificationException {
+    public PKIXCertPathBuilderResult validateCertificate(X509Certificate certificate,
+            VerifyingSignatureStatus status) 
+            throws CertificateVerificationException {
         ResourceBundle rb = ResourceBundle.getBundle("CoreBundle");
         try {
             if (isSelfSigned(certificate) == true) {
@@ -88,7 +92,7 @@ public class CertificateVerifier {
             }
 
             // Attempt to build the certification chain and verify it
-            PKIXCertPathBuilderResult verifiedCertChain = verifyCertificate(
+            PKIXCertPathBuilderResult verifiedCertChain = verifyCertificateChain(
                     certificate, trustedRootCerts, intermediateCerts);
 
             // Check whether the certificate is revoked by the CRL
@@ -115,7 +119,17 @@ public class CertificateVerifier {
         }
     }
 
-    private boolean isSelfSigned(X509Certificate certificate) throws CertificateException, NoSuchAlgorithmException, NoSuchProviderException {
+    /**
+     * Checks if a certificate is self-signed
+     *
+     * @param certificate to be checked
+     * @return true if the certificate is self signed, false otherwise
+     * @throws CertificateException
+     * @throws NoSuchAlgorithmException
+     * @throws NoSuchProviderException
+     */
+    private boolean isSelfSigned(X509Certificate certificate) throws 
+            CertificateException, NoSuchAlgorithmException, NoSuchProviderException {
         Objects.requireNonNull(certificate);
         PublicKey key = certificate.getPublicKey();
         try {
@@ -139,7 +153,7 @@ public class CertificateVerifier {
      * expired)
      * @author Svetlin Nakov
      */
-    private PKIXCertPathBuilderResult verifyCertificate(
+    private PKIXCertPathBuilderResult verifyCertificateChain(
             X509Certificate certificate, Set<X509Certificate> trustedRootCertificates,
             Set<X509Certificate> intermediateCertificates) throws
             GeneralSecurityException {
