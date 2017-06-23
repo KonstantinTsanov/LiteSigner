@@ -62,13 +62,20 @@ import org.bouncycastle.asn1.x509.GeneralNames;
  */
 public class CRLVerifier {
 
-    private static CRLVerifier singleton = new CRLVerifier();
+    private static CRLVerifier SINGLETON = new CRLVerifier();
 
     public static CRLVerifier getInstance() {
-        return singleton;
+        return SINGLETON;
     }
 
-    public void verifyCertificateCRLs(X509Certificate cert) throws CertificateVerificationException {
+    /**
+     * Checks if a certificate has been revoked by a CRL
+     *
+     * @param cert certificate to be checked
+     * @throws CertificateVerificationException
+     */
+    public void verifyCertificateCRLs(X509Certificate cert) throws
+            CertificateVerificationException {
         try {
             List<String> crlDistPoints = getCrlDistributionPoints(cert);
             for (String crlDP : crlDistPoints) {
@@ -78,7 +85,7 @@ public class CRLVerifier {
                             "The certificate is revoked by CRL: " + crlDP);
                 }
             }
-        } catch (Exception ex) {
+        } catch (CertificateVerificationException | IOException | CRLException | CertificateException | NamingException ex) {
             if (ex instanceof CertificateVerificationException) {
                 throw (CertificateVerificationException) ex;
             } else {
@@ -96,7 +103,8 @@ public class CRLVerifier {
      * @author Svetlin Nakov
      */
     private X509CRL downloadCRL(String crlURL) throws IOException,
-            CertificateVerificationException, NamingException, MalformedURLException, CertificateException, CRLException {
+            CertificateVerificationException, NamingException, MalformedURLException,
+            CertificateException, CRLException {
         if (crlURL.startsWith("http://") || crlURL.startsWith("https://")
                 || crlURL.startsWith("ftp://")) {
             return downloadCRLFromWeb(crlURL);
@@ -154,18 +162,18 @@ public class CRLVerifier {
     }
 
     /**
-     * Extracts all CRL distribution point URLs from the "CRL Distribution
-     * Point" extension in a X.509 certificate. If CRL distribution point
-     * extension is unavailable, returns an empty list.
+     * Extracts all CRL distribution point urls from the CRL Distribution Point
+     * extension in a given x509 certificate.
      *
-     * @param certificate
-     * @return
+     * @param certificate to be extracted from
+     * @return List of URLS
      * @throws java.security.cert.CertificateParsingException
      * @throws java.io.IOException
      * @throws java.security.cert.CertificateEncodingException
      * @author Konstantin Tsanov
      */
-    public List<String> getCrlDistributionPoints(X509Certificate certificate) throws CertificateParsingException, IOException, CertificateEncodingException, CertificateException {
+    public List<String> getCrlDistributionPoints(X509Certificate certificate) throws CertificateParsingException,
+            IOException, CertificateEncodingException, CertificateException {
         List<String> urlList = new ArrayList<>();
         byte[] crldpExt = certificate.getExtensionValue("2.5.29.31");
         if (crldpExt == null) {
