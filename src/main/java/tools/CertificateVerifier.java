@@ -70,7 +70,7 @@ public class CertificateVerifier {
      * @author Konstantin Tsanov <k.tsanov@gmail.com>
      * @author Svetlin Nakov
      */
-    public PKIXCertPathBuilderResult validateCertificate(X509Certificate certificate,
+    public PKIXCertPathBuilderResult verifyCertificate(X509Certificate certificate,
             VerifyingSignatureStatus status) 
             throws CertificateVerificationException {
         ResourceBundle rb = ResourceBundle.getBundle("CoreBundle");
