@@ -23,7 +23,7 @@
  */
 package core;
 
-import callbacks.CertificatePanel;
+import interfaces.CertificatePanel;
 import java.io.File;
 import java.security.KeyStoreException;
 import java.util.ArrayList;
@@ -45,7 +45,7 @@ import sun.security.pkcs11.wrapper.PKCS11Exception;
 import tools.DeviceManager;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import java.util.ResourceBundle;
-import callbacks.DevicePanel;
+import interfaces.DevicePanel;
 import exceptions.CertificateVerificationException;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
@@ -69,7 +69,7 @@ import org.bouncycastle.asn1.x500.style.IETFUtils;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateHolder;
 import tools.CertificateVerifier;
 import callbacks.PasswordCallback;
-import callbacks.SignatureVerificationPanel;
+import interfaces.SignatureVerificationPanel;
 import enums.SignatureType;
 import exceptions.SignatureValidationException;
 import exceptions.SigningException;
