@@ -426,7 +426,7 @@ public class Pkcs7 extends Signer {
                     Collection tstSigners = tst.toCMSSignedData().getSignerInfos().getSigners();
                     TimeStampTokenInfo timestampInfo = validateTimeStamp(tstSigners, tst);
                     status.includeStatus(rb.getString("status.hasTimestamp"));
-                    status.includeStatus(String.format("TSA: %s\n Time: %s", timestampInfo.getTsa().toString(), timestampInfo.getGenTime().toString()));
+                    status.includeStatus(String.format("TSA: %s\nTime: %s", timestampInfo.getTsa().toString(), timestampInfo.getGenTime().toString()));
                 } catch (CMSException | TSPException | IOException ex) {
                     log.log(Level.SEVERE, "The process of timestamp verification failed!", ex);
                     throw new TimestampVerificationException(rb.getString("timestampValidationError"));
