@@ -21,15 +21,15 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package signers;
+package com.ktsanov.signers;
 
-import enums.SignatureType;
-import exceptions.CertificateVerificationException;
-import exceptions.SignatureValidationException;
-import exceptions.SigningException;
-import exceptions.TimestampVerificationException;
-import exceptions.TimestampingException;
-import exceptions.TimestampingException.TimestampingError;
+import com.ktsanov.enums.SignatureType;
+import com.ktsanov.exceptions.CertificateVerificationException;
+import com.ktsanov.exceptions.SignatureValidationException;
+import com.ktsanov.exceptions.SigningException;
+import com.ktsanov.exceptions.TimestampVerificationException;
+import com.ktsanov.exceptions.TimestampingException;
+import com.ktsanov.exceptions.TimestampingException.TimestampingError;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -97,9 +97,9 @@ import org.bouncycastle.tsp.TimeStampToken;
 import org.bouncycastle.tsp.TimeStampTokenInfo;
 import org.bouncycastle.util.Store;
 import org.bouncycastle.util.StoreException;
-import pkcs.Pkcs1_;
-import tools.CertificateVerifier;
-import tools.VerifyingSignatureStatus;
+import com.ktsanov.pkcs.Pkcs1_;
+import com.ktsanov.tools.CertificateVerifier;
+import com.ktsanov.tools.VerifyingSignatureStatus;
 
 /**
  *

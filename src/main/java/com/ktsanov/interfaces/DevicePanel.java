@@ -21,23 +21,38 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package exceptions;
+package com.ktsanov.interfaces;
+
+import javax.swing.JFrame;
+import javax.swing.JTable;
+import javax.swing.table.DefaultTableModel;
 
 /**
- * This exception must be thrown whenever any problems with the signing process
- * occur.
+ * Contract between the device selection panel and the back-end.
  *
  * @author Konstantin Tsanov <k.tsanov@gmail.com>
  */
-public class SigningException extends Exception {
+public interface DevicePanel {
 
-    private static final long serialVersionUID = 1L;
+    /**
+     * Gets the device table model.
+     *
+     * @return Model containing list of token descriptions.
+     */
+    public DefaultTableModel getTokensModel();
 
-    public SigningException(String message, Throwable cause) {
-        super(message, cause);
-    }
+    /**
+     * Gets panel's parent frame.
+     *
+     * @return The parent
+     */
+    public JFrame getPanelParent();
 
-    public SigningException(String message) {
-        super(message);
-    }
+    /**
+     * Gets the JTable in which the devices are displayed.
+     *
+     * @return The table showing the currently attached devices.
+     */
+    public JTable getTokensTable();
+
 }

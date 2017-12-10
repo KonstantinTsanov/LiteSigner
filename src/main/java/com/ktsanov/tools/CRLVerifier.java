@@ -21,9 +21,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package tools;
+package com.ktsanov.tools;
 
-import exceptions.CertificateVerificationException;
+import com.ktsanov.exceptions.CertificateVerificationException;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;

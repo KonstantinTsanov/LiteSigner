@@ -21,21 +21,14 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package exceptions;
+package com.ktsanov.enums;
 
 /**
  *
  * @author Konstantin Tsanov <k.tsanov@gmail.com>
  */
-public class TimestampVerificationException extends Exception {
-
-    private static final long serialVersionUID = 1L;
-
-    public TimestampVerificationException(String message, Throwable cause) {
-        super(message, cause);
-    }
-
-    public TimestampVerificationException(String message) {
-        super(message);
-    }
+public enum SignatureType {
+    Attached,
+    Detached,
+    Pdf
 }

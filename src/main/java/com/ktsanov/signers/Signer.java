@@ -21,17 +21,17 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package signers;
+package com.ktsanov.signers;
 
-import exceptions.CertificateVerificationException;
-import exceptions.SignatureValidationException;
-import exceptions.SigningException;
-import exceptions.TimestampVerificationException;
-import exceptions.TimestampingException;
+import com.ktsanov.exceptions.CertificateVerificationException;
+import com.ktsanov.exceptions.SignatureValidationException;
+import com.ktsanov.exceptions.SigningException;
+import com.ktsanov.exceptions.TimestampVerificationException;
+import com.ktsanov.exceptions.TimestampingException;
 import java.io.File;
 import java.io.IOException;
 import javax.naming.AuthenticationException;
-import pkcs.Pkcs1_;
+import com.ktsanov.pkcs.Pkcs1_;
 
 /**
  *

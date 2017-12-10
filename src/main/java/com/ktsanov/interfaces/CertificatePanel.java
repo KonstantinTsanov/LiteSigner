@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package interfaces;
+package com.ktsanov.interfaces;
 
 import javax.swing.JFrame;
 import javax.swing.JTable;

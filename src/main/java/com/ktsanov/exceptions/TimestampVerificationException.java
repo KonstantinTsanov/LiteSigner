@@ -21,29 +21,21 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package interfaces;
-
-import javax.swing.JFrame;
-import javax.swing.JTextArea;
+package com.ktsanov.exceptions;
 
 /**
- * Contract between the signature verification panel and the back-end.
  *
  * @author Konstantin Tsanov <k.tsanov@gmail.com>
  */
-public interface SignatureVerificationPanel {
+public class TimestampVerificationException extends Exception {
 
-    /**
-     * Gets the text area in which the validation details are displayed.
-     *
-     * @return Validation details output textarea.
-     */
-    public JTextArea getSignatureDetailsJTextArea();
+    private static final long serialVersionUID = 1L;
 
-    /**
-     * Gets the panel's parent frame.
-     *
-     * @return JFrame parent.
-     */
-    public JFrame getPanelParent();
+    public TimestampVerificationException(String message, Throwable cause) {
+        super(message, cause);
+    }
+
+    public TimestampVerificationException(String message) {
+        super(message);
+    }
 }

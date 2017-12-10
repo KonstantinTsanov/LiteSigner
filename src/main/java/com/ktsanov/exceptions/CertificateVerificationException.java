@@ -21,19 +21,23 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package callbacks;
+package com.ktsanov.exceptions;
 
 /**
- * Obtains the PIN from the user when necessary.
+ * This exception must be thrown when a verification problem occurs.
  *
  * @author Konstantin Tsanov <k.tsanov@gmail.com>
+ * @author Svetlin Nakov
  */
-public interface PasswordCallback {
+public class CertificateVerificationException extends Exception {
 
-    /**
-     * Gets the pin from the user.
-     *
-     * @return PIN.
-     */
-    public char[] getPin();
+    private static final long serialVersionUID = 1L;
+
+    public CertificateVerificationException(String message, Throwable cause) {
+        super(message, cause);
+    }
+
+    public CertificateVerificationException(String message) {
+        super(message);
+    }
 }

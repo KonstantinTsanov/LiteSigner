@@ -21,9 +21,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package core;
+package com.ktsanov.core;
 
-import interfaces.CertificatePanel;
+import com.ktsanov.interfaces.CertificatePanel;
 import java.io.File;
 import java.security.KeyStoreException;
 import java.util.ArrayList;
@@ -40,13 +40,13 @@ import java.util.logging.Level;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 import lombok.extern.java.Log;
-import pkcs.Pkcs11;
+import com.ktsanov.pkcs.Pkcs11;
 import sun.security.pkcs11.wrapper.PKCS11Exception;
-import tools.DeviceManager;
+import com.ktsanov.tools.DeviceManager;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import java.util.ResourceBundle;
-import interfaces.DevicePanel;
-import exceptions.CertificateVerificationException;
+import com.ktsanov.interfaces.DevicePanel;
+import com.ktsanov.exceptions.CertificateVerificationException;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.security.UnrecoverableKeyException;
@@ -67,18 +67,18 @@ import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x500.style.BCStyle;
 import org.bouncycastle.asn1.x500.style.IETFUtils;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateHolder;
-import tools.CertificateVerifier;
-import callbacks.PasswordCallback;
-import interfaces.SignatureVerificationPanel;
-import enums.SignatureType;
-import exceptions.SignatureValidationException;
-import exceptions.SigningException;
-import exceptions.TimestampVerificationException;
-import exceptions.TimestampingException;
+import com.ktsanov.tools.CertificateVerifier;
+import com.ktsanov.callbacks.PasswordCallback;
+import com.ktsanov.interfaces.SignatureVerificationPanel;
+import com.ktsanov.enums.SignatureType;
+import com.ktsanov.exceptions.SignatureValidationException;
+import com.ktsanov.exceptions.SigningException;
+import com.ktsanov.exceptions.TimestampVerificationException;
+import com.ktsanov.exceptions.TimestampingException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import signers.Pkcs7;
-import tools.VerifyingSignatureStatus;
+import com.ktsanov.signers.Pkcs7;
+import com.ktsanov.tools.VerifyingSignatureStatus;
 
 /**
  * Manages all threads except the EDT within the application. Takes care of all

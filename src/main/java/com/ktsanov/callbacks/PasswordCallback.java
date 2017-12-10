@@ -21,14 +21,19 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package enums;
+package com.ktsanov.callbacks;
 
 /**
+ * Obtains the PIN from the user when necessary.
  *
  * @author Konstantin Tsanov <k.tsanov@gmail.com>
  */
-public enum SignatureType {
-    Attached,
-    Detached,
-    Pdf
+public interface PasswordCallback {
+
+    /**
+     * Gets the pin from the user.
+     *
+     * @return PIN.
+     */
+    public char[] getPin();
 }

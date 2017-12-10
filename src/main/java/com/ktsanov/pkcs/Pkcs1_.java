@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package pkcs;
+package com.ktsanov.pkcs;
 
 import java.security.KeyStore;
 import java.io.IOException;
@@ -34,7 +34,7 @@ import java.util.List;
 import javax.naming.AuthenticationException;
 import lombok.Getter;
 import lombok.extern.java.Log;
-import callbacks.PasswordCallback;
+import com.ktsanov.callbacks.PasswordCallback;
 
 /**
  *

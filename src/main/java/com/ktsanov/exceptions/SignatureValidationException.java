@@ -21,36 +21,22 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package tools;
+package com.ktsanov.exceptions;
 
 /**
- * Stores information about the signature verification process.
+ * Should be thrown whenever validation fails.
  *
  * @author Konstantin Tsanov <k.tsanov@gmail.com>
  */
-public class VerifyingSignatureStatus {
+public class SignatureValidationException extends Exception {
 
-    private String status = "";
+    private static final long serialVersionUID = 1L;
 
-    /**
-     * Includes additional information to the status string.
-     *
-     * @param information Status information to be included.
-     */
-    public void includeStatus(String information) {
-        if (status.length() != 0) {
-            status = status.concat("\n".concat(information));
-        } else {
-            status = information;
-        }
+    public SignatureValidationException(String message, Throwable cause) {
+        super(message, cause);
     }
 
-    /**
-     * Returns the status string.
-     *
-     * @return - the status string.
-     */
-    public String getStatus() {
-        return status;
+    public SignatureValidationException(String message) {
+        super(message);
     }
 }

@@ -21,23 +21,36 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package exceptions;
+package com.ktsanov.tools;
 
 /**
- * This exception must be thrown when a verification problem occurs.
+ * Stores information about the signature verification process.
  *
  * @author Konstantin Tsanov <k.tsanov@gmail.com>
- * @author Svetlin Nakov
  */
-public class CertificateVerificationException extends Exception {
+public class VerifyingSignatureStatus {
 
-    private static final long serialVersionUID = 1L;
+    private String status = "";
 
-    public CertificateVerificationException(String message, Throwable cause) {
-        super(message, cause);
+    /**
+     * Includes additional information to the status string.
+     *
+     * @param information Status information to be included.
+     */
+    public void includeStatus(String information) {
+        if (status.length() != 0) {
+            status = status.concat("\n".concat(information));
+        } else {
+            status = information;
+        }
     }
 
-    public CertificateVerificationException(String message) {
-        super(message);
+    /**
+     * Returns the status string.
+     *
+     * @return - the status string.
+     */
+    public String getStatus() {
+        return status;
     }
 }

@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package pkcs;
+package com.ktsanov.pkcs;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
